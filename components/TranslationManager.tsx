@@ -6,6 +6,8 @@ import { generateSwornTranslation } from '../services/geminiService';
 import { findGlossaryMatches, findTMMatches } from '../services/tmService';
 import { Lang, translations } from '../locales';
 import RegistryView from './RegistryView';
+import AITranslationHelper from './AITranslationHelper';
+import EmailSuggestionModal from './EmailSuggestionModal';
 
 interface TranslationManagerProps {
   jobs: TranslationJob[];
@@ -39,6 +41,8 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
   const [zoomLevel, setZoomLevel] = useState(0.85); 
   const [tmMatches, setTmMatches] = useState<any[]>([]);
   const [glossaryMatches, setGlossaryMatches] = useState<any[]>([]);
+  const [aiEmailSuggestion, setAiEmailSuggestion] = useState<string>('');
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   
   // Editor State
   const editorRef = useRef<HTMLDivElement>(null);
@@ -627,6 +631,22 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
                             </div>
                          ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
                        </div>
+
+                       {/* AI Translation Helper */}
+                       {editorRef.current && editorRef.current.innerText && (
+                         <div>
+                           <AITranslationHelper
+                             sourceText={workbenchJob.attachments?.[0] ? "Source document" : undefined}
+                             targetText={editorRef.current.innerText}
+                             sourceLang={workbenchJob.sourceLang}
+                             targetLang={workbenchJob.targetLang}
+                             onSuggestion={(suggestion) => {
+                               setAiEmailSuggestion(suggestion);
+                               setIsEmailModalOpen(true);
+                             }}
+                           />
+                         </div>
+                       )}
                     </div>
                   </div>
                </div>
@@ -730,6 +750,13 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
           </div>
         </div>
       )}
+
+      {/* AI Email Suggestion Modal */}
+      <EmailSuggestionModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        emailContent={aiEmailSuggestion}
+      />
     </div>
   );
 };
