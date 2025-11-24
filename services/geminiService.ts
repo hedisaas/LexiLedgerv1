@@ -2,7 +2,9 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 
 // Initialize the client with the API Key from environment variables
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// In Vite, use import.meta.env instead of process.env
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY || '';
+const ai = new GoogleGenAI({ apiKey });
 
 export const generateSwornTranslation = async (
   sourceLang: string,
@@ -82,6 +84,25 @@ export const generateSwornTranslation = async (
   } catch (error) {
     console.error("Gemini Translation Error:", error);
     throw new Error("Failed to translate document.");
+  }
+};
+
+// General-purpose content generation for AI features
+export const generateContent = async (prompt: string): Promise<string> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash-exp',
+      contents: prompt,
+      config: {
+        temperature: 0.7,
+        maxOutputTokens: 2048,
+      }
+    });
+
+    return response.text || "No response generated.";
+  } catch (error) {
+    console.error("Gemini Content Generation Error:", error);
+    throw new Error("Failed to generate content.");
   }
 };
 
