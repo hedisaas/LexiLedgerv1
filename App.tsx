@@ -229,8 +229,8 @@ const App: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
         <div className="p-6 border-b border-slate-100">
-          <Logo size="small" />
-          <p className="text-xs text-slate-400 mt-1">{t.subtitle}</p>
+          <Logo size="medium" />
+          <p className="text-xs text-slate-400 mt-2">{t.subtitle}</p>
         </div>
         
         <nav className="flex-1 p-4">

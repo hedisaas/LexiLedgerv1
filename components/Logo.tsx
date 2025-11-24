@@ -12,9 +12,9 @@ export const Logo: React.FC<LogoProps> = ({
   variant = 'full' 
 }) => {
   const sizes = {
-    small: { width: 120, height: 40, iconSize: 24 },
-    medium: { width: 180, height: 60, iconSize: 36 },
-    large: { width: 240, height: 80, iconSize: 48 }
+    small: { width: 160, height: 50, iconSize: 32 },
+    medium: { width: 220, height: 70, iconSize: 44 },
+    large: { width: 280, height: 90, iconSize: 56 }
   };
 
   const { width, height, iconSize } = sizes[size];

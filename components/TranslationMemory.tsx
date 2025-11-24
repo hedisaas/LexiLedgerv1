@@ -122,13 +122,13 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
   };
 
   const filteredTM = tmUnits.filter(tm => 
-    tm.sourceSegment.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tm.targetSegment.toLowerCase().includes(searchQuery.toLowerCase())
+    (tm.sourceSegment || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (tm.targetSegment || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredGlossary = glossary.filter(term =>
-    term.source.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    term.target.toLowerCase().includes(searchQuery.toLowerCase())
+    (term.source || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (term.target || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
