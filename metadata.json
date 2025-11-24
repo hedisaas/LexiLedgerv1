@@ -1,0 +1,7 @@
+{
+  "name": "LexiLedger",
+  "description": "A comprehensive financial dashboard and translation management system designed for sworn translators to track jobs, manage expenses, analyze revenue, and generate invoices.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
