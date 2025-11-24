@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { TranslationJob, Language, TranslationStatus } from '../types';
-import { Plus, Search, Printer, Edit2, Trash2, AlertCircle, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Camera, Upload, X, Sparkles, Copy, FileText, Languages, Save, Maximize2, Eye, Download, Code, LayoutTemplate, RotateCw, RotateCcw, RefreshCw, ZoomIn, ZoomOut, Move, ChevronDown, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, FileDown, Book, Database, BookOpen, CheckCircle, FolderOpen } from 'lucide-react';
+import { Plus, Search, Printer, Edit2, Trash2, AlertCircle, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Camera, Upload, X, Sparkles, Copy, FileText, Languages, Save, Maximize2, Eye, Download, Code, LayoutTemplate, RotateCw, RotateCcw, RefreshCw, ZoomIn, ZoomOut, Move, ChevronDown, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, FileDown, Book, Database, BookOpen, CheckCircle, FolderOpen, AlignJustify, List as ListIcon, ListOrdered, Highlighter, Type, Palette } from 'lucide-react';
 import { generateSwornTranslation } from '../services/geminiService';
 import { findGlossaryMatches, findTMMatches } from '../services/tmService';
 import { Lang, translations } from '../locales';
@@ -44,8 +44,12 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
   const [aiEmailSuggestion, setAiEmailSuggestion] = useState<string>('');
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   
-  // Editor State
+  // Editor State & Formatting
   const editorRef = useRef<HTMLDivElement>(null);
+  const [fontSize, setFontSize] = useState(12);
+  const [fontFamily, setFontFamily] = useState('Times New Roman');
+  const [textColor, setTextColor] = useState('#000000');
+  const [bgColor, setBgColor] = useState('transparent');
 
   // Preview Modal State
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -632,51 +636,153 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
                          ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
                        </div>
 
-                       {/* AI Translation Helper */}
-                       {editorRef.current && editorRef.current.innerText && (
-                         <div>
-                           <AITranslationHelper
-                             sourceText={workbenchJob.attachments?.[0] ? "Source document" : undefined}
-                             targetText={editorRef.current.innerText}
-                             sourceLang={workbenchJob.sourceLang}
-                             targetLang={workbenchJob.targetLang}
-                             onSuggestion={(suggestion) => {
-                               setAiEmailSuggestion(suggestion);
-                               setIsEmailModalOpen(true);
-                             }}
-                           />
-                         </div>
-                       )}
+                       {/* AI Translation Helper - Always visible */}
+                       <div>
+                         <AITranslationHelper
+                           sourceText={workbenchJob.attachments?.[0] ? "Source document" : undefined}
+                           targetText={editorRef.current?.innerText || ''}
+                           sourceLang={workbenchJob.sourceLang}
+                           targetLang={workbenchJob.targetLang}
+                           onSuggestion={(suggestion) => {
+                             setAiEmailSuggestion(suggestion);
+                             setIsEmailModalOpen(true);
+                           }}
+                         />
+                       </div>
                     </div>
                   </div>
                </div>
             </div>
 
             <div className="flex-1 bg-slate-200 flex flex-col relative overflow-hidden">
-               <div className="p-2 border-b border-slate-300 flex flex-wrap gap-2 justify-between items-center bg-slate-100 z-10 shadow-sm">
-                  <div className="flex items-center gap-2">
-                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                        <button onClick={() => executeCommand('bold')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Bold className="w-4 h-4" /></button>
-                        <button onClick={() => executeCommand('italic')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Italic className="w-4 h-4" /></button>
-                        <button onClick={() => executeCommand('underline')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Underline className="w-4 h-4" /></button>
-                        <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                        <button onClick={() => executeCommand('justifyLeft')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignLeft className="w-4 h-4" /></button>
-                        <button onClick={() => executeCommand('justifyCenter')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignCenter className="w-4 h-4" /></button>
-                        <button onClick={() => executeCommand('justifyRight')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignRight className="w-4 h-4" /></button>
+               {/* Enhanced Word-like Toolbar */}
+               <div className="border-b border-slate-300 bg-white z-10 shadow-sm">
+                  {/* First Row - Font & Size */}
+                  <div className="px-3 py-2 border-b border-slate-200 flex items-center gap-2 flex-wrap">
+                      {/* Font Family */}
+                      <select 
+                        value={fontFamily} 
+                        onChange={(e) => {
+                          setFontFamily(e.target.value);
+                          document.execCommand('fontName', false, e.target.value);
+                        }}
+                        className="px-2 py-1 border border-slate-300 rounded text-xs focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Calibri">Calibri</option>
+                        <option value="Garamond">Garamond</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Courier New">Courier New</option>
+                      </select>
+
+                      {/* Font Size */}
+                      <select 
+                        value={fontSize}
+                        onChange={(e) => {
+                          const size = parseInt(e.target.value);
+                          setFontSize(size);
+                          document.execCommand('fontSize', false, '7');
+                          const fontElements = document.querySelectorAll('font[size="7"]');
+                          fontElements.forEach(el => {
+                            (el as HTMLElement).removeAttribute('size');
+                            (el as HTMLElement).style.fontSize = `${size}pt`;
+                          });
+                        }}
+                        className="px-2 py-1 border border-slate-300 rounded text-xs w-16 focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="14">14</option>
+                        <option value="16">16</option>
+                        <option value="18">18</option>
+                        <option value="20">20</option>
+                        <option value="24">24</option>
+                      </select>
+
+                      {/* Text Color */}
+                      <div className="flex items-center gap-1 border border-slate-300 rounded p-1">
+                        <Type className="w-3.5 h-3.5 text-slate-600" />
+                        <input 
+                          type="color" 
+                          value={textColor}
+                          onChange={(e) => {
+                            setTextColor(e.target.value);
+                            document.execCommand('foreColor', false, e.target.value);
+                          }}
+                          className="w-6 h-6 cursor-pointer"
+                          title="Text color"
+                        />
                       </div>
-                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                         <button onClick={() => setTargetOrientation('portrait')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'portrait' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>{t.portrait}</button>
-                         <button onClick={() => setTargetOrientation('landscape')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'landscape' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>{t.landscape}</button>
-                      </div>
-                      <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm ml-2">
-                         <button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomOut className="w-3.5 h-3.5" /></button>
-                         <span className="text-[10px] w-8 text-center font-medium text-slate-600">{Math.round(zoomLevel * 100)}%</span>
-                         <button onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
+
+                      {/* Background Color */}
+                      <div className="flex items-center gap-1 border border-slate-300 rounded p-1">
+                        <Highlighter className="w-3.5 h-3.5 text-slate-600" />
+                        <input 
+                          type="color" 
+                          value={bgColor === 'transparent' ? '#ffffff' : bgColor}
+                          onChange={(e) => {
+                            setBgColor(e.target.value);
+                            document.execCommand('hiliteColor', false, e.target.value);
+                          }}
+                          className="w-6 h-6 cursor-pointer"
+                          title="Highlight color"
+                        />
                       </div>
                   </div>
-                  <button onClick={triggerWorkbenchAi} disabled={isAiTranslating || !workbenchJob.attachments?.length} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
-                    <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : t.autoTranslate}
-                  </button>
+
+                  {/* Second Row - Format ting */}
+                  <div className="px-3 py-2 flex items-center gap-2 flex-wrap bg-slate-50">
+                      {/* Text Style */}
+                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                        <button onClick={() => executeCommand('bold')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Bold (Ctrl+B)"><Bold className="w-4 h-4" /></button>
+                        <button onClick={() => executeCommand('italic')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Italic (Ctrl+I)"><Italic className="w-4 h-4" /></button>
+                        <button onClick={() => executeCommand('underline')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Underline (Ctrl+U)"><Underline className="w-4 h-4" /></button>
+                      </div>
+
+                      {/* Alignment */}
+                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                        <button onClick={() => executeCommand('justifyLeft')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Align Left"><AlignLeft className="w-4 h-4" /></button>
+                        <button onClick={() => executeCommand('justifyCenter')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Center"><AlignCenter className="w-4 h-4" /></button>
+                        <button onClick={() => executeCommand('justifyRight')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Align Right"><AlignRight className="w-4 h-4" /></button>
+                        <button onClick={() => executeCommand('justifyFull')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Justify"><AlignJustify className="w-4 h-4" /></button>
+                      </div>
+
+                      {/* Lists */}
+                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                        <button onClick={() => executeCommand('insertUnorderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Bullet List"><ListIcon className="w-4 h-4" /></button>
+                        <button onClick={() => executeCommand('insertOrderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Numbered List"><ListOrdered className="w-4 h-4" /></button>
+                      </div>
+
+                      {/* Indentation */}
+                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                        <button onClick={() => executeCommand('indent')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 text-xs font-bold" title="Increase Indent">→</button>
+                        <button onClick={() => executeCommand('outdent')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 text-xs font-bold" title="Decrease Indent">←</button>
+                      </div>
+
+                      {/* Page Orientation */}
+                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                         <button onClick={() => setTargetOrientation('portrait')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'portrait' ? 'bg-primary-600 text-white' : 'text-slate-500'}`} title="Portrait">📄</button>
+                         <button onClick={() => setTargetOrientation('landscape')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'landscape' ? 'bg-primary-600 text-white' : 'text-slate-500'}`} title="Landscape">📃</button>
+                      </div>
+
+                      {/* Zoom */}
+                      <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm">
+                         <button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomOut className="w-3.5 h-3.5" /></button>
+                         <span className="text-[10px] w-10 text-center font-medium text-slate-600">{Math.round(zoomLevel * 100)}%</span>
+                         <button onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
+                      </div>
+
+                      <div className="ml-auto">
+                        <button onClick={triggerWorkbenchAi} disabled={isAiTranslating || !workbenchJob.attachments?.length} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
+                          <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : t.autoTranslate}
+                        </button>
+                      </div>
+                  </div>
                </div>
                
                <div className="flex-1 relative overflow-auto bg-slate-200 p-8 flex justify-center items-start">

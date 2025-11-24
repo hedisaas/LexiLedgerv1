@@ -12,6 +12,7 @@ import ClientManager from './components/ClientManager';
 import QuoteManager from './components/QuoteManager';
 import ClientPortal from './components/ClientPortal';
 import TranslationMemory from './components/TranslationMemory';
+import Logo from './components/Logo';
 import { translations, Lang } from './locales';
 import { useAuth, useUserRole } from './hooks/useAuth';
 import { useTranslationJobs, useExpenses, useQuotes, useBusinessProfile } from './hooks/useSupabaseData';
@@ -228,11 +229,8 @@ const App: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
         <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-2 text-slate-900">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">L</div>
-            <span className="font-bold text-lg tracking-tight">LexiLedger</span>
-          </div>
-          <p className="text-xs text-slate-400 mt-1 ml-10">{t.subtitle}</p>
+          <Logo size="small" />
+          <p className="text-xs text-slate-400 mt-1">{t.subtitle}</p>
         </div>
         
         <nav className="flex-1 p-4">
@@ -284,7 +282,9 @@ const App: React.FC = () => {
         
         {/* Header with Cloud Sync Status */}
         <div className="h-16 bg-white border-b border-slate-200 flex items-center px-4 justify-between md:justify-end shrink-0">
-          <span className="font-bold text-lg md:hidden">LexiLedger</span>
+          <div className="md:hidden">
+            <Logo size="small" />
+          </div>
           <div className="flex items-center gap-4">
              <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full text-xs font-medium border border-slate-100">
                 <Cloud className={`w-3 h-3 ${isSyncing ? 'text-amber-500 animate-pulse' : 'text-emerald-500'}`} />

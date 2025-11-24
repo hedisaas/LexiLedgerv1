@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Lock, User, ArrowRight, ShieldCheck, Briefcase, UserCog, Loader2 } from 'lucide-react';
 import { Lang, translations } from '../locales';
 import { useAuth } from '../hooks/useAuth';
+import Logo from './Logo';
 
 interface LoginProps {
   onLogin: (role: 'admin' | 'secretary' | 'client', clientName?: string) => void;
@@ -74,10 +75,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
         <div className="bg-slate-900 p-8 text-center">
-          <div className="w-16 h-16 bg-primary-600 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg shadow-primary-900/50">
-             <span className="text-3xl font-bold text-white">L</span>
+          <div className="flex justify-center mb-4">
+            <div className="bg-white p-4 rounded-2xl shadow-lg">
+              <Logo size="medium" variant="icon" />
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">LexiLedger</h1>
+          <Logo size="medium" variant="text" className="text-white justify-center flex mb-2" />
           <p className="text-slate-400 text-sm mt-1">{t.subtitle}</p>
         </div>
         
