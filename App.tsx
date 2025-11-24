@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, FileText, PieChart, LogOut, Globe, Settings as SettingsIcon, Users, FileSignature, Cloud, Shield, Loader2 } from 'lucide-react';
+import { LayoutDashboard, FileText, PieChart, LogOut, Globe, Settings as SettingsIcon, Users, FileSignature, Cloud, Shield, Loader2, Database } from 'lucide-react';
 import { TranslationJob, Expense, Language, TranslationStatus, ExpenseCategory, BusinessProfile, Quote, QuoteStatus } from './types';
 import Dashboard from './components/Dashboard';
 import TranslationManager from './components/TranslationManager';
@@ -11,6 +11,7 @@ import Settings from './components/Settings';
 import ClientManager from './components/ClientManager';
 import QuoteManager from './components/QuoteManager';
 import ClientPortal from './components/ClientPortal';
+import TranslationMemory from './components/TranslationMemory';
 import { translations, Lang } from './locales';
 import { useAuth, useUserRole } from './hooks/useAuth';
 import { useTranslationJobs, useExpenses, useQuotes, useBusinessProfile } from './hooks/useSupabaseData';
@@ -47,7 +48,7 @@ const App: React.FC = () => {
   const t = translations[lang];
 
   // --- App State ---
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'translations' | 'clients' | 'quotes' | 'expenses' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'translations' | 'clients' | 'quotes' | 'expenses' | 'resources' | 'settings'>('dashboard');
   
   // --- Supabase Data Hooks ---
   const { 
@@ -239,6 +240,7 @@ const App: React.FC = () => {
           <NavItem icon={FileText} label={t.translations} active={activeTab === 'translations'} onClick={() => setActiveTab('translations')} />
           <NavItem icon={Users} label={t.clients} active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
           <NavItem icon={FileSignature} label={t.quotes} active={activeTab === 'quotes'} onClick={() => setActiveTab('quotes')} />
+          <NavItem icon={Database} label="Resources" active={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
           {/* Restrict Expenses for Secretary */}
           {userRole === 'admin' && (
             <NavItem icon={PieChart} label={t.expenses} active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} />
@@ -322,6 +324,9 @@ const App: React.FC = () => {
               onPrintQuote={(q) => setPrintDoc({ data: q, type: 'quote' })}
               lang={lang}
             />
+          )}
+          {activeTab === 'resources' && (
+            <TranslationMemory lang={lang} />
           )}
           {activeTab === 'expenses' && userRole === 'admin' && (
              <ExpenseManager 
