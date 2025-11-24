@@ -75,7 +75,7 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole })
     // Generate all dates in range
     const start = getCutoffDate();
     const end = new Date();
-    end.setHours(0,0,0,0);
+    end.setHours(23,59,59,999); // Include all of today
     
     let loopStart = start;
     if (dateRange === 'all') {

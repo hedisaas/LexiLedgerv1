@@ -13,6 +13,7 @@ import QuoteManager from './components/QuoteManager';
 import ClientPortal from './components/ClientPortal';
 import TranslationMemory from './components/TranslationMemory';
 import Logo from './components/Logo';
+import BusinessProfileReminder from './components/BusinessProfileReminder';
 import { translations, Lang } from './locales';
 import { useAuth, useUserRole } from './hooks/useAuth';
 import { useTranslationJobs, useExpenses, useQuotes, useBusinessProfile } from './hooks/useSupabaseData';
@@ -84,8 +85,32 @@ const App: React.FC = () => {
   // Invoice Modal State (Shared for Jobs and Quotes)
   const [printDoc, setPrintDoc] = useState<{data: TranslationJob | Quote, type: 'invoice' | 'quote'} | null>(null);
   
+  // Business Profile Reminder State
+  const [showProfileReminder, setShowProfileReminder] = useState(false);
+  
   // Sync State
   const isSyncing = jobsLoading || expensesLoading || quotesLoading || profileLoading;
+
+  // Show profile reminder after data loads if profile is incomplete
+  useEffect(() => {
+    if (user && !profileLoading && businessProfile) {
+      const dismissed = localStorage.getItem('profile_reminder_dismissed');
+      if (dismissed !== 'true') {
+        const isIncomplete = !businessProfile.businessName || 
+          !businessProfile.translatorName || 
+          !businessProfile.address || 
+          !businessProfile.taxId || 
+          !businessProfile.phone || 
+          !businessProfile.email;
+        
+        if (isIncomplete) {
+          // Show reminder after a short delay
+          const timer = setTimeout(() => setShowProfileReminder(true), 2000);
+          return () => clearTimeout(timer);
+        }
+      }
+    }
+  }, [user, profileLoading, businessProfile]);
 
   // --- Persistence ---
   useEffect(() => {
@@ -356,6 +381,18 @@ const App: React.FC = () => {
           type={printDoc?.type || 'invoice'} 
           profile={businessProfile} 
           onClose={() => setPrintDoc(null)} 
+        />
+      )}
+
+      {/* Business Profile Reminder */}
+      {showProfileReminder && (
+        <BusinessProfileReminder
+          profile={businessProfile}
+          onClose={() => setShowProfileReminder(false)}
+          onGoToSettings={() => {
+            setActiveMenu('settings');
+            setShowProfileReminder(false);
+          }}
         />
       )}
 

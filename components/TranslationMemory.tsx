@@ -42,7 +42,17 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
           .order('timestamp', { ascending: false });
         
         if (error) throw error;
-        setTmUnits(data || []);
+        
+        // Map snake_case to camelCase
+        const mappedData = (data || []).map(item => ({
+          id: item.id,
+          sourceSegment: item.source_segment,
+          targetSegment: item.target_segment,
+          langPair: item.lang_pair,
+          timestamp: item.timestamp
+        }));
+        
+        setTmUnits(mappedData);
       } else {
         const { data, error } = await supabase
           .from('glossary_terms')
