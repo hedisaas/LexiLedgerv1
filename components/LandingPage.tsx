@@ -147,9 +147,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
             </div>
 
             {/* Dashboard Content */}
-            <div className="p-6 grid grid-cols-3 gap-6">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Sidebar */}
-                <div className="col-span-1 space-y-4">
+                <div className="hidden md:block col-span-1 space-y-4">
                     <div className="h-8 w-32 bg-slate-100 rounded-md animate-pulse" />
                     <div className="space-y-2">
                         {[1, 2, 3, 4].map(i => (
@@ -159,7 +159,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                 </div>
 
                 {/* Main Area */}
-                <div className="col-span-2 space-y-6">
+                <div className="col-span-1 md:col-span-2 space-y-6">
                     {/* Stats Row */}
                     <div className="grid grid-cols-3 gap-4">
                         {[1, 2, 3].map(i => (
@@ -261,14 +261,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                             icon={CheckCircle2}
                             title={text.translationCompleted}
                             subtitle={text.projectLabel}
-                            className="top-10 -left-12 md:-left-24 z-20"
+                            className="hidden md:flex top-10 -left-24 z-20"
                             delay={0}
                         />
                         <FloatingCard
                             icon={TrendingUp}
                             title={text.revenueUpdated}
                             subtitle={text.revenueAmount}
-                            className="bottom-20 -right-4 md:-right-16 z-20"
+                            className="hidden md:flex bottom-20 -right-16 z-20"
                             delay={1.5}
                         />
                     </div>
