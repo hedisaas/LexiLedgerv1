@@ -13,12 +13,15 @@ import {
     Check
 } from 'lucide-react';
 import Logo from './Logo';
+import { Lang } from '../locales';
 
 interface LandingPageProps {
     onGetStarted: () => void;
+    lang: Lang;
+    toggleLang: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLang }) => {
     const [scrollY, setScrollY] = useState(0);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -38,6 +41,91 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             window.removeEventListener('mousemove', handleMouseMove);
         };
     }, []);
+
+    const t = {
+        en: {
+            features: "Features",
+            pricing: "Pricing",
+            about: "About",
+            login: "Log in",
+            startTrial: "Start Free Trial",
+            newEngine: "New: AI Translation Engine 2.0",
+            heroTitle: "Manage your translations",
+            heroTitleHighlight: "like a pro.",
+            heroSubtitle: "The all-in-one workspace for sworn translators. Draft, manage, invoice, and track your business in one beautiful interface.",
+            getStartedFree: "Get Started Free",
+            watchDemo: "Watch Demo",
+            translationCompleted: "Translation Completed",
+            projectLabel: "Project #1284 - Legal Contract",
+            revenueUpdated: "Revenue Updated",
+            revenueAmount: "+ 450.000 TND received",
+            trustedBy: "Trusted by 500+ Sworn Translators",
+            everythingTitle: "Everything you need to run your business.",
+            everythingSubtitle: "Stop juggling 5 different apps. LexiLedger brings your translations, invoices, and clients into one seamless workflow.",
+            feature1Title: "AI-Powered Translation",
+            feature1Desc: "Draft documents 10x faster with our specialized legal translation engine.",
+            feature2Title: "Smart Invoicing",
+            feature2Desc: "Create compliant invoices in one click. Track payments and follow up automatically.",
+            feature3Title: "Official Registry",
+            feature3Desc: "Automatically maintain your sworn registry. Export for authorities instantly.",
+            spotlight: "Feature Spotlight",
+            focusTitle: "Focus on translating.",
+            focusHighlight: "We handle the rest.",
+            focusDesc: "LexiLedger isn't just a tool; it's your personal secretary. From organizing client files to tracking deadlines, we ensure you never miss a beat.",
+            list1: "Automatic deadline reminders",
+            list2: "Client portal for secure file sharing",
+            list3: "Real-time financial analytics",
+            list4: "Secure cloud backup",
+            exploreFeatures: "Explore all features",
+            readyTitle: "Ready to upgrade your workflow?",
+            readySubtitle: "Join thousands of sworn translators who trust LexiLedger for their daily operations.",
+            start14Day: "Start 14-Day Free Trial",
+            noCreditCard: "No credit card required. Cancel anytime.",
+            footerRights: "© 2025 LexiLedger. Crafted with precision."
+        },
+        fr: {
+            features: "Fonctionnalités",
+            pricing: "Tarifs",
+            about: "À propos",
+            login: "Connexion",
+            startTrial: "Essai Gratuit",
+            newEngine: "Nouveau : Moteur de Traduction IA 2.0",
+            heroTitle: "Gérez vos traductions",
+            heroTitleHighlight: "comme un pro.",
+            heroSubtitle: "L'espace de travail tout-en-un pour les traducteurs assermentés. Rédigez, gérez, facturez et suivez votre activité dans une interface magnifique.",
+            getStartedFree: "Commencer Gratuitement",
+            watchDemo: "Voir la Démo",
+            translationCompleted: "Traduction Terminée",
+            projectLabel: "Projet #1284 - Contrat Légal",
+            revenueUpdated: "Revenus Mis à Jour",
+            revenueAmount: "+ 450,000 TND reçus",
+            trustedBy: "Approuvé par 500+ Traducteurs Assermentés",
+            everythingTitle: "Tout ce dont vous avez besoin pour gérer votre activité.",
+            everythingSubtitle: "Arrêtez de jongler avec 5 applications différentes. LexiLedger rassemble vos traductions, factures et clients dans un flux de travail fluide.",
+            feature1Title: "Traduction par IA",
+            feature1Desc: "Rédigez des documents 10x plus vite avec notre moteur spécialisé en traduction juridique.",
+            feature2Title: "Facturation Intelligente",
+            feature2Desc: "Créez des factures conformes en un clic. Suivez les paiements et relancez automatiquement.",
+            feature3Title: "Registre Officiel",
+            feature3Desc: "Maintenez automatiquement votre registre assermenté. Exportez pour les autorités instantanément.",
+            spotlight: "Fonctionnalité en Vedette",
+            focusTitle: "Concentrez-vous sur la traduction.",
+            focusHighlight: "Nous gérons le reste.",
+            focusDesc: "LexiLedger n'est pas juste un outil ; c'est votre secrétaire personnel. De l'organisation des fichiers clients au suivi des délais, nous nous assurons que rien ne vous échappe.",
+            list1: "Rappels automatiques d'échéances",
+            list2: "Portail client pour le partage sécurisé",
+            list3: "Analyses financières en temps réel",
+            list4: "Sauvegarde cloud sécurisée",
+            exploreFeatures: "Explorer toutes les fonctionnalités",
+            readyTitle: "Prêt à améliorer votre flux de travail ?",
+            readySubtitle: "Rejoignez des milliers de traducteurs assermentés qui font confiance à LexiLedger pour leurs opérations quotidiennes.",
+            start14Day: "Démarrer l'Essai Gratuit de 14 Jours",
+            noCreditCard: "Pas de carte de crédit requise. Annulez à tout moment.",
+            footerRights: "© 2025 LexiLedger. Conçu avec précision."
+        }
+    };
+
+    const text = t[lang];
 
     // --- MOCKUP COMPONENTS ---
 
@@ -114,14 +202,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <Logo />
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-                        <a href="#features" className="hover:text-teal-600 transition-colors">Features</a>
-                        <a href="#pricing" className="hover:text-teal-600 transition-colors">Pricing</a>
-                        <a href="#about" className="hover:text-teal-600 transition-colors">About</a>
+                        <a href="#features" className="hover:text-teal-600 transition-colors">{text.features}</a>
+                        <a href="#pricing" className="hover:text-teal-600 transition-colors">{text.pricing}</a>
+                        <a href="#about" className="hover:text-teal-600 transition-colors">{text.about}</a>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button onClick={onGetStarted} className="text-slate-600 font-medium hover:text-teal-600">Log in</button>
+                        <button onClick={toggleLang} className="text-slate-600 font-medium hover:text-teal-600 flex items-center gap-1">
+                            <Globe className="w-4 h-4" /> {lang.toUpperCase()}
+                        </button>
+                        <button onClick={onGetStarted} className="text-slate-600 font-medium hover:text-teal-600">{text.login}</button>
                         <button onClick={onGetStarted} className="px-5 py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-all hover:shadow-lg hover:-translate-y-0.5">
-                            Start Free Trial
+                            {text.startTrial}
                         </button>
                     </div>
                 </div>
@@ -135,28 +226,28 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
                         </span>
-                        New: AI Translation Engine 2.0
+                        {text.newEngine}
                     </div>
 
                     <h1 className="text-5xl md:text-7xl font-bold text-slate-900 mb-6 tracking-tight leading-tight animate-fade-in-up delay-100">
-                        Manage your translations <br />
+                        {text.heroTitle} <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">
-                            like a pro.
+                            {text.heroTitleHighlight}
                         </span>
                     </h1>
 
                     <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up delay-200">
-                        The all-in-one workspace for sworn translators. Draft, manage, invoice, and track your business in one beautiful interface.
+                        {text.heroSubtitle}
                     </p>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center mb-20 animate-fade-in-up delay-300">
                         <button onClick={onGetStarted} className="px-8 py-4 bg-teal-600 text-white rounded-xl font-semibold text-lg hover:bg-teal-700 transition-all shadow-xl shadow-teal-200 hover:shadow-2xl hover:-translate-y-1 flex items-center justify-center gap-2">
-                            Get Started Free
+                            {text.getStartedFree}
                             <ArrowRight className="w-5 h-5" />
                         </button>
                         <button className="px-8 py-4 bg-white text-slate-700 rounded-xl font-semibold text-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
                             <Play className="w-5 h-5 fill-slate-700" />
-                            Watch Demo
+                            {text.watchDemo}
                         </button>
                     </div>
 
@@ -168,15 +259,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                         {/* Floating Elements */}
                         <FloatingCard
                             icon={CheckCircle2}
-                            title="Translation Completed"
-                            subtitle="Project #1284 - Legal Contract"
+                            title={text.translationCompleted}
+                            subtitle={text.projectLabel}
                             className="top-10 -left-12 md:-left-24 z-20"
                             delay={0}
                         />
                         <FloatingCard
                             icon={TrendingUp}
-                            title="Revenue Updated"
-                            subtitle="+ 450.000 TND received"
+                            title={text.revenueUpdated}
+                            subtitle={text.revenueAmount}
                             className="bottom-20 -right-4 md:-right-16 z-20"
                             delay={1.5}
                         />
@@ -193,7 +284,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             {/* Social Proof */}
             <section className="py-10 border-y border-slate-100 bg-slate-50/50">
                 <div className="max-w-7xl mx-auto px-6 text-center">
-                    <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-8">Trusted by 500+ Sworn Translators</p>
+                    <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-8">{text.trustedBy}</p>
                     <div className="flex flex-wrap justify-center gap-12 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
                         {['GlobalTrans', 'LegalLingua', 'CertifiedPro', 'SwornNet', 'LexiCorp'].map((name, i) => (
                             <span key={i} className="text-xl font-bold text-slate-600 flex items-center gap-2">
@@ -208,28 +299,28 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <section id="features" className="py-32 px-6">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-24">
-                        <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">Everything you need to run your business.</h2>
-                        <p className="text-xl text-slate-600 max-w-2xl mx-auto">Stop juggling 5 different apps. LexiLedger brings your translations, invoices, and clients into one seamless workflow.</p>
+                        <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">{text.everythingTitle}</h2>
+                        <p className="text-xl text-slate-600 max-w-2xl mx-auto">{text.everythingSubtitle}</p>
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-8">
                         {[
                             {
                                 icon: Zap,
-                                title: "AI-Powered Translation",
-                                desc: "Draft documents 10x faster with our specialized legal translation engine.",
+                                title: text.feature1Title,
+                                desc: text.feature1Desc,
                                 color: "bg-amber-100 text-amber-600"
                             },
                             {
                                 icon: FileText,
-                                title: "Smart Invoicing",
-                                desc: "Create compliant invoices in one click. Track payments and follow up automatically.",
+                                title: text.feature2Title,
+                                desc: text.feature2Desc,
                                 color: "bg-teal-100 text-teal-600"
                             },
                             {
                                 icon: ShieldCheck,
-                                title: "Official Registry",
-                                desc: "Automatically maintain your sworn registry. Export for authorities instantly.",
+                                title: text.feature3Title,
+                                desc: text.feature3Desc,
                                 color: "bg-blue-100 text-blue-600"
                             }
                         ].map((feature, i) => (
@@ -250,22 +341,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
                     <div className="relative z-10">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-sm font-medium mb-6 border border-teal-500/30">
-                            <Star className="w-4 h-4" /> Feature Spotlight
+                            <Star className="w-4 h-4" /> {text.spotlight}
                         </div>
                         <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-                            Focus on translating. <br />
-                            <span className="text-teal-400">We handle the rest.</span>
+                            {text.focusTitle} <br />
+                            <span className="text-teal-400">{text.focusHighlight}</span>
                         </h2>
                         <p className="text-lg text-slate-300 mb-8 leading-relaxed">
-                            LexiLedger isn't just a tool; it's your personal secretary. From organizing client files to tracking deadlines, we ensure you never miss a beat.
+                            {text.focusDesc}
                         </p>
 
                         <ul className="space-y-4 mb-10">
                             {[
-                                "Automatic deadline reminders",
-                                "Client portal for secure file sharing",
-                                "Real-time financial analytics",
-                                "Secure cloud backup"
+                                text.list1,
+                                text.list2,
+                                text.list3,
+                                text.list4
                             ].map((item, i) => (
                                 <li key={i} className="flex items-center gap-3 text-slate-200">
                                     <div className="w-6 h-6 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-400">
@@ -277,7 +368,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                         </ul>
 
                         <button onClick={onGetStarted} className="group flex items-center gap-2 text-teal-400 font-semibold hover:text-teal-300 transition-colors">
-                            Explore all features <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            {text.exploreFeatures} <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>
 
@@ -308,17 +399,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <section className="py-32 px-6">
                 <div className="max-w-4xl mx-auto text-center">
                     <h2 className="text-4xl md:text-6xl font-bold text-slate-900 mb-8">
-                        Ready to upgrade your workflow?
+                        {text.readyTitle}
                     </h2>
                     <p className="text-xl text-slate-600 mb-12 max-w-2xl mx-auto">
-                        Join thousands of sworn translators who trust LexiLedger for their daily operations.
+                        {text.readySubtitle}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <button onClick={onGetStarted} className="px-10 py-4 bg-slate-900 text-white rounded-xl font-bold text-lg hover:bg-slate-800 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1">
-                            Start 14-Day Free Trial
+                            {text.start14Day}
                         </button>
                     </div>
-                    <p className="mt-6 text-sm text-slate-500">No credit card required. Cancel anytime.</p>
+                    <p className="mt-6 text-sm text-slate-500">{text.noCreditCard}</p>
                 </div>
             </section>
 
@@ -327,7 +418,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                     <Logo />
                     <div className="text-slate-400 text-sm">
-                        © 2025 LexiLedger. Crafted with precision.
+                        {text.footerRights}
                     </div>
                 </div>
             </footer>

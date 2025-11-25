@@ -190,7 +190,7 @@ const App: React.FC = () => {
   // --- RENDER: Login / Landing Page ---
   if (!user && !clientPortalUser) {
     if (!showLogin) {
-      return <LandingPage onGetStarted={() => setShowLogin(true)} />;
+      return <LandingPage onGetStarted={() => setShowLogin(true)} lang={lang} toggleLang={toggleLang} />;
     }
 
     return (
