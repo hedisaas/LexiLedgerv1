@@ -93,8 +93,16 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole })
     // Ensure loopStart is valid
     if (isNaN(loopStart.getTime())) loopStart = new Date();
 
+    // Helper to get local YYYY-MM-DD
+    const getLocalISODate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     for (let d = new Date(loopStart); d <= end; d.setDate(d.getDate() + 1)) {
-      const key = d.toISOString().split('T')[0];
+      const key = getLocalISODate(d);
       dataMap.set(key, { date: key, revenue: 0, expenses: 0 });
     }
 
@@ -102,14 +110,15 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole })
     filteredJobs
       .filter(job => job.status === TranslationStatus.COMPLETED || job.status === TranslationStatus.PAID)
       .forEach(job => {
-        const key = new Date(job.date).toISOString().split('T')[0];
+        // Use substring to avoid timezone shifts if date is YYYY-MM-DD
+        const key = typeof job.date === 'string' ? job.date.substring(0, 10) : getLocalISODate(new Date(job.date));
         if (dataMap.has(key)) {
           dataMap.get(key)!.revenue += job.priceTotal;
         }
       });
 
     filteredExpenses.forEach(exp => {
-      const key = new Date(exp.date).toISOString().split('T')[0];
+      const key = typeof exp.date === 'string' ? exp.date.substring(0, 10) : getLocalISODate(new Date(exp.date));
       if (dataMap.has(key)) {
         dataMap.get(key)!.expenses += exp.amount;
       }
