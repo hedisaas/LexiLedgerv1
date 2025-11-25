@@ -34,7 +34,7 @@ export const findGlossaryMatches = (text: string, langPair: string): GlossaryTer
   const glossary = getGlossary();
   if (!text) return [];
   // Simple case-insensitive match
-  return glossary.filter(term => 
+  return glossary.filter(term =>
     text.toLowerCase().includes(term.source.toLowerCase())
   );
 };
@@ -80,4 +80,71 @@ export const addToTM = (source: string, target: string, langPair: string) => {
     timestamp: Date.now()
   };
   saveTM([newUnit, ...tm]);
+};
+
+// --- TMX Import/Export ---
+
+export const exportTMX = (units: TMUnit[]): string => {
+  const header = `<?xml version="1.0" encoding="UTF-8"?>
+<tmx version="1.4">
+  <header creationtool="LexiLedger" creationtoolversion="1.0" segtype="sentence" adminlang="en-us" srclang="en" datatype="PlainText"/>
+  <body>`;
+
+  const body = units.map(u => {
+    const [srcLang, tgtLang] = u.langPair.split('-');
+    return `    <tu tuid="${u.id}">
+      <tuv xml:lang="${srcLang}">
+        <seg>${u.sourceSegment.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</seg>
+      </tuv>
+      <tuv xml:lang="${tgtLang}">
+        <seg>${u.targetSegment.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</seg>
+      </tuv>
+    </tu>`;
+  }).join('\n');
+
+  const footer = `
+  </body>
+</tmx>`;
+
+  return header + '\n' + body + footer;
+};
+
+export const importTMX = async (xmlContent: string): Promise<TMUnit[]> => {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
+  const tus = xmlDoc.getElementsByTagName("tu");
+  const newUnits: TMUnit[] = [];
+
+  for (let i = 0; i < tus.length; i++) {
+    const tu = tus[i];
+    const tuvs = tu.getElementsByTagName("tuv");
+    if (tuvs.length < 2) continue;
+
+    let source = "";
+    let target = "";
+    let srcLang = "en";
+    let tgtLang = "fr";
+
+    // Naive assumption: first is source, second is target if not specified otherwise
+    // In a real TMX, we should check xml:lang attributes against desired pair
+    if (tuvs[0].getElementsByTagName("seg")[0]) {
+      source = tuvs[0].getElementsByTagName("seg")[0].textContent || "";
+      srcLang = tuvs[0].getAttribute("xml:lang") || "en";
+    }
+    if (tuvs[1].getElementsByTagName("seg")[0]) {
+      target = tuvs[1].getElementsByTagName("seg")[0].textContent || "";
+      tgtLang = tuvs[1].getAttribute("xml:lang") || "fr";
+    }
+
+    if (source && target) {
+      newUnits.push({
+        id: crypto.randomUUID(),
+        sourceSegment: source,
+        targetSegment: target,
+        langPair: `${srcLang}-${tgtLang}`.toLowerCase(),
+        timestamp: Date.now()
+      });
+    }
+  }
+  return newUnits;
 };

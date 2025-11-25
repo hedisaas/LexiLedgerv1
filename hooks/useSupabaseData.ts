@@ -387,20 +387,21 @@ export const useBusinessProfile = (user: User | null) => {
         .from('business_profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+      if (error) throw error;
 
-      if (data) {
+      if (data && data.length > 0) {
+        const profileData = data[0];
         setProfile({
-          businessName: data.business_name,
-          translatorName: data.translator_name,
-          address: data.address || '',
-          taxId: data.tax_id || '',
-          phone: data.phone || '',
-          email: data.email || '',
-          logo: data.logo,
-          rib: data.rib
+          businessName: profileData.business_name,
+          translatorName: profileData.translator_name,
+          address: profileData.address || '',
+          taxId: profileData.tax_id || '',
+          phone: profileData.phone || '',
+          email: profileData.email || '',
+          logo: profileData.logo,
+          rib: profileData.rib
         });
       } else {
         // Create default profile if it doesn't exist

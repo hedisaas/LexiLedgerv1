@@ -1,13 +1,11 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { TranslationJob, Language, TranslationStatus } from '../types';
-import { Plus, Search, Printer, Edit2, Trash2, AlertCircle, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Camera, Upload, X, Sparkles, Copy, FileText, Languages, Save, Maximize2, Eye, Download, Code, LayoutTemplate, RotateCw, RotateCcw, RefreshCw, ZoomIn, ZoomOut, Move, ChevronDown, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, FileDown, Book, Database, BookOpen, CheckCircle, FolderOpen, AlignJustify, List as ListIcon, ListOrdered, Highlighter, Type, Palette } from 'lucide-react';
+import { Plus, Search, Printer, Edit2, Trash2, AlertCircle, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Camera, Upload, X, Copy, FileText, Languages, Save, Maximize2, Eye, Download, Code, LayoutTemplate, RotateCw, RotateCcw, RefreshCw, ZoomIn, ZoomOut, Move, ChevronDown, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, FileDown, Book, Database, BookOpen, CheckCircle, FolderOpen, AlignJustify, List as ListIcon, ListOrdered, Highlighter, Type, Palette, Sparkles } from 'lucide-react';
 import { generateSwornTranslation } from '../services/geminiService';
 import { findGlossaryMatches, findTMMatches } from '../services/tmService';
 import { Lang, translations } from '../locales';
 import RegistryView from './RegistryView';
 import AITranslationHelper from './AITranslationHelper';
-import EmailSuggestionModal from './EmailSuggestionModal';
 
 interface TranslationManagerProps {
   jobs: TranslationJob[];
@@ -24,32 +22,33 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingJob, setEditingJob] = useState<TranslationJob | null>(null);
-  
+
   // Completion Workflow
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
   const [pendingCompletionJob, setPendingCompletionJob] = useState<TranslationJob | null>(null);
   const completionFileRef = useRef<HTMLInputElement>(null);
-  
+
   // Registry State
   const [isRegistryOpen, setIsRegistryOpen] = useState(false);
-  
+
   // Workbench State
   const [workbenchJob, setWorkbenchJob] = useState<TranslationJob | null>(null);
   const [isAiTranslating, setIsAiTranslating] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [targetOrientation, setTargetOrientation] = useState<'portrait' | 'landscape'>('portrait');
-  const [zoomLevel, setZoomLevel] = useState(0.85); 
+  const [zoomLevel, setZoomLevel] = useState(0.85);
   const [tmMatches, setTmMatches] = useState<any[]>([]);
   const [glossaryMatches, setGlossaryMatches] = useState<any[]>([]);
-  const [aiEmailSuggestion, setAiEmailSuggestion] = useState<string>('');
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  
+
   // Editor State & Formatting
   const editorRef = useRef<HTMLDivElement>(null);
   const [fontSize, setFontSize] = useState(12);
   const [fontFamily, setFontFamily] = useState('Times New Roman');
   const [textColor, setTextColor] = useState('#000000');
   const [bgColor, setBgColor] = useState('transparent');
+
+  // Status Dropdown State
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
 
   // Preview Modal State
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -86,12 +85,26 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
   // --- TM & Glossary Lookup ---
   useEffect(() => {
     if (workbenchJob && workbenchJob.translatedText) {
-        const gMatches = findGlossaryMatches(workbenchJob.translatedText, 'en-fr');
-        setGlossaryMatches(gMatches);
-        const tMatches = findTMMatches(workbenchJob.translatedText);
-        setTmMatches(tMatches);
+      const gMatches = findGlossaryMatches(workbenchJob.translatedText, 'en-fr');
+      setGlossaryMatches(gMatches);
+      const tMatches = findTMMatches(workbenchJob.translatedText);
+      setTmMatches(tMatches);
     }
   }, [workbenchJob?.translatedText]);
+
+  // Close status dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (statusDropdownOpen) {
+        setStatusDropdownOpen(null);
+      }
+    };
+
+    if (statusDropdownOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [statusDropdownOpen]);
 
   const handleClientSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
@@ -107,26 +120,26 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     if (e.target.files) {
       const files = Array.from(e.target.files) as File[];
       const newAttachments: string[] = [];
-      
+
       let processedCount = 0;
       files.forEach(file => {
-         if (file.size > 4 * 1024 * 1024) {
-            alert(`File ${file.name} is too large. Skip.`);
-            processedCount++;
-            return;
-         }
-         const reader = new FileReader();
-         reader.onloadend = () => {
-            newAttachments.push(reader.result as string);
-            processedCount++;
-            if (processedCount === files.length) {
-               setFormData(prev => ({
-                 ...prev,
-                 attachments: [...(prev.attachments || []), ...newAttachments]
-               }));
-            }
-         };
-         reader.readAsDataURL(file);
+        if (file.size > 4 * 1024 * 1024) {
+          alert(`File ${file.name} is too large. Skip.`);
+          processedCount++;
+          return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newAttachments.push(reader.result as string);
+          processedCount++;
+          if (processedCount === files.length) {
+            setFormData(prev => ({
+              ...prev,
+              attachments: [...(prev.attachments || []), ...newAttachments]
+            }));
+          }
+        };
+        reader.readAsDataURL(file);
       });
     }
   };
@@ -147,9 +160,9 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
 
     // INTERCEPT COMPLETION
     if (jobToSave.status === TranslationStatus.COMPLETED && !jobToSave.finalDocument) {
-       setPendingCompletionJob(jobToSave);
-       setIsCompletionModalOpen(true);
-       return;
+      setPendingCompletionJob(jobToSave);
+      setIsCompletionModalOpen(true);
+      return;
     }
 
     if (editingJob) {
@@ -161,22 +174,22 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
   };
 
   const handleCompletionUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-     if (e.target.files && e.target.files[0] && pendingCompletionJob) {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onloadend = () => {
-           const finalDoc = reader.result as string;
-           const finalJob = { ...pendingCompletionJob, finalDocument: finalDoc };
-           
-           if (editingJob) onUpdateJob(finalJob);
-           else onAddJob(finalJob);
+    if (e.target.files && e.target.files[0] && pendingCompletionJob) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const finalDoc = reader.result as string;
+        const finalJob = { ...pendingCompletionJob, finalDocument: finalDoc };
 
-           setIsCompletionModalOpen(false);
-           setPendingCompletionJob(null);
-           closeForm();
-        };
-        reader.readAsDataURL(file);
-     }
+        if (editingJob) onUpdateJob(finalJob);
+        else onAddJob(finalJob);
+
+        setIsCompletionModalOpen(false);
+        setPendingCompletionJob(null);
+        closeForm();
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const closeForm = () => {
@@ -200,24 +213,26 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     setFormData(job);
     setIsFormOpen(true);
   };
-  
-  const handleDownloadFinal = (job: TranslationJob) => {
-    if (job.finalDocument) {
-       const link = document.createElement('a');
-       link.href = job.finalDocument;
-       link.download = `${job.clientName}_Final_Translation`;
-       link.click();
-    } else {
-       alert("No final document uploaded.");
-    }
+
+  const handleStatusChange = (job: TranslationJob, newStatus: TranslationStatus) => {
+    onUpdateJob({ ...job, status: newStatus });
+    setStatusDropdownOpen(null);
   };
 
-  // --- WORKBENCH LOGIC ---
+  const handleDownloadFinal = (job: TranslationJob) => {
+    if (!job.finalDocument) return;
+    const link = document.createElement('a');
+    link.href = job.finalDocument;
+    link.download = `${job.clientName}_${job.documentType}_final.pdf`;
+    link.click();
+  };
+
+  // Workbench Handlers
   const openWorkbench = (job: TranslationJob) => {
     setWorkbenchJob({ ...job });
     setRotation(0);
     setTargetOrientation('portrait');
-    setZoomLevel(0.85); 
+    setZoomLevel(0.85);
   };
 
   const closeWorkbench = () => {
@@ -243,7 +258,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
 
   const downloadAsWord = () => {
     if (!workbenchJob || !editorRef.current) return;
-    
+
     const content = editorRef.current.innerHTML;
     const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' 
                           xmlns:w='urn:schemas-microsoft-com:office:word' 
@@ -257,7 +272,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
                           </head><body>`;
     const footer = "</body></html>";
     const sourceHTML = header + content + footer;
-    
+
     const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
     const fileDownload = document.createElement("a");
     document.body.appendChild(fileDownload);
@@ -298,7 +313,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
       alert("No document image found to translate.");
       return;
     }
-    
+
     setIsAiTranslating(true);
     try {
       const processedImage = await rotateImage(workbenchJob.attachments[0], rotation);
@@ -309,7 +324,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
         processedImage,
         targetOrientation
       );
-      
+
       setWorkbenchJob(prev => prev ? ({ ...prev, translatedText: result }) : null);
       if (editorRef.current) {
         editorRef.current.innerHTML = result;
@@ -326,7 +341,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     const today = new Date();
     const due = new Date(dueDate);
     const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     if (diffDays < 0) return <span className="text-rose-500 text-xs font-bold flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {t.overdue}</span>;
     if (diffDays <= 2) return <span className="text-amber-500 text-xs font-bold">{t.due} {diffDays} {t.daysLeft}</span>;
     return <span className="text-slate-400 text-xs">{t.due}: {dueDate}</span>;
@@ -345,13 +360,13 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const isToday = new Date().toISOString().split('T')[0] === dateStr;
-      
+
       // Logic Update: Show job if it has a Due Date matching today, 
       // OR if it has NO Due Date but was Created today.
       const dayJobs = jobs.filter(j => {
-         if (j.dueDate === dateStr) return true;
-         if (!j.dueDate && j.date === dateStr) return true;
-         return false;
+        if (j.dueDate === dateStr) return true;
+        if (!j.dueDate && j.date === dateStr) return true;
+        return false;
       });
 
       grid.push(
@@ -362,17 +377,17 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
           </div>
           <div className="flex-1 overflow-y-auto space-y-1 pr-1 max-h-[80px] scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
             {dayJobs.map(job => {
-               // Style based on status
-               let statusStyle = "bg-amber-50 border-amber-100 text-amber-800"; // Pending default
-               if (job.status === TranslationStatus.COMPLETED) statusStyle = "bg-emerald-50 border-emerald-100 text-emerald-700 opacity-80";
-               if (job.status === TranslationStatus.PAID) statusStyle = "bg-slate-100 border-slate-200 text-slate-500 line-through opacity-60";
-               if (job.status === TranslationStatus.CANCELLED) statusStyle = "bg-rose-50 border-rose-100 text-rose-400";
+              // Style based on status
+              let statusStyle = "bg-amber-50 border-amber-100 text-amber-800"; // Pending default
+              if (job.status === TranslationStatus.COMPLETED) statusStyle = "bg-emerald-50 border-emerald-100 text-emerald-700 opacity-80";
+              if (job.status === TranslationStatus.PAID) statusStyle = "bg-slate-100 border-slate-200 text-slate-500 line-through opacity-60";
+              if (job.status === TranslationStatus.CANCELLED) statusStyle = "bg-rose-50 border-rose-100 text-rose-400";
 
-               return (
-                 <button key={job.id} onClick={() => handleEdit(job)} title={`${job.clientName} - ${job.status}`} className={`w-full text-left px-1.5 py-1 rounded border text-[10px] leading-tight truncate shadow-sm transition-transform hover:scale-[1.02] ${statusStyle} font-medium`}>
-                   {job.clientName}
-                 </button>
-               );
+              return (
+                <button key={job.id} onClick={() => handleEdit(job)} title={`${job.clientName} - ${job.status}`} className={`w-full text-left px-1.5 py-1 rounded border text-[10px] leading-tight truncate shadow-sm transition-transform hover:scale-[1.02] ${statusStyle} font-medium`}>
+                  {job.clientName}
+                </button>
+              );
             })}
           </div>
         </div>
@@ -384,15 +399,15 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-bold text-slate-800 w-40 capitalize">{monthName} {year}</h2>
             <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-               <button onClick={() => setCalendarDate(new Date(year, month - 1, 1))} className="p-1 hover:bg-white rounded-md shadow-sm transition"><ChevronLeft className="w-4 h-4 text-slate-600" /></button>
-               <button onClick={() => setCalendarDate(new Date())} className="px-2 text-xs font-medium text-slate-600 hover:bg-white rounded-md shadow-sm transition">Today</button>
-               <button onClick={() => setCalendarDate(new Date(year, month + 1, 1))} className="p-1 hover:bg-white rounded-md shadow-sm transition"><ChevronRight className="w-4 h-4 text-slate-600" /></button>
+              <button onClick={() => setCalendarDate(new Date(year, month - 1, 1))} className="p-1 hover:bg-white rounded-md shadow-sm transition"><ChevronLeft className="w-4 h-4 text-slate-600" /></button>
+              <button onClick={() => setCalendarDate(new Date())} className="px-2 text-xs font-medium text-slate-600 hover:bg-white rounded-md shadow-sm transition">Today</button>
+              <button onClick={() => setCalendarDate(new Date(year, month + 1, 1))} className="p-1 hover:bg-white rounded-md shadow-sm transition"><ChevronRight className="w-4 h-4 text-slate-600" /></button>
             </div>
           </div>
           <div className="flex items-center gap-2 text-[10px] font-medium text-slate-500">
-             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-400"></div>Pending</div>
-             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-400"></div>Done</div>
-             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-400"></div>Paid</div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-400"></div>Pending</div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-400"></div>Done</div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-400"></div>Paid</div>
           </div>
         </div>
         <div className="grid grid-cols-7 bg-slate-800 text-white rounded-t-xl overflow-hidden shrink-0">
@@ -403,7 +418,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     );
   };
 
-  const filteredJobs = jobs.filter(job => 
+  const filteredJobs = jobs.filter(job =>
     job.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     job.documentType.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (job.invoiceNumber && job.invoiceNumber.includes(searchTerm))
@@ -453,21 +468,51 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
                     <td className="px-6 py-4"><div className="font-medium text-slate-900">{job.clientName}</div><div className="text-xs text-slate-400 truncate max-w-[150px]">{job.clientInfo}</div></td>
                     <td className="px-6 py-4 hidden md:table-cell">
                       <div className="flex items-center gap-2 mb-1"><span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-mono">{job.sourceLang} → {job.targetLang}</span></div>
-                      <div className="flex items-center gap-2 text-xs"><span>{job.documentType}</span>{job.attachments?.length ? <button onClick={() => setPreviewImage(job.attachments![0])} className="text-primary-600 hover:text-primary-700 p-1 bg-primary-50 rounded"><Eye className="w-3 h-3"/></button> : null}</div>
+                      <div className="flex items-center gap-2 text-xs"><span>{job.documentType}</span>{job.attachments?.length ? <button onClick={() => setPreviewImage(job.attachments![0])} className="text-primary-600 hover:text-primary-700 p-1 bg-primary-50 rounded"><Eye className="w-3 h-3" /></button> : null}</div>
                     </td>
                     <td className="px-6 py-4 text-right font-semibold text-slate-900">{job.priceTotal.toFixed(3)} TND</td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${job.status === TranslationStatus.PAID ? 'bg-emerald-100 text-emerald-800' : job.status === TranslationStatus.PENDING ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>{job.status}</span>
+                      <div className="relative inline-block">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusDropdownOpen(statusDropdownOpen === job.id ? null : job.id);
+                          }}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize cursor-pointer hover:opacity-80 transition-opacity ${job.status === TranslationStatus.PAID ? 'bg-emerald-100 text-emerald-800' : job.status === TranslationStatus.PENDING ? 'bg-amber-100 text-amber-800' : job.status === TranslationStatus.COMPLETED ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-800'}`}
+                        >
+                          {job.status}
+                          <ChevronDown className="w-3 h-3 ml-1" />
+                        </button>
+
+                        {statusDropdownOpen === job.id && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute top-full mt-1 left-1/2 transform -translate-x-1/2 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 min-w-[120px]">
+                            {Object.values(TranslationStatus).map(status => (
+                              <button
+                                key={status}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(job, status);
+                                }}
+                                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 transition-colors capitalize ${job.status === status ? 'bg-slate-100 font-semibold' : ''}`}
+                              >
+                                {status}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         {job.finalDocument && (
-                          <button onClick={() => handleDownloadFinal(job)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition" title="Download Final"><FileDown className="w-4 h-4"/></button>
+                          <button onClick={() => handleDownloadFinal(job)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition" title="Download Final"><FileDown className="w-4 h-4" /></button>
                         )}
-                        <button onClick={() => openWorkbench(job)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"><Languages className="w-4 h-4" /></button>
+                        <button onClick={() => openWorkbench(job)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition" title="Open Workbench"><Languages className="w-4 h-4" /></button>
                         <button onClick={() => onPrintInvoice(job)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded transition"><Printer className="w-4 h-4" /></button>
                         <button onClick={() => handleEdit(job)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded transition"><Edit2 className="w-4 h-4" /></button>
-                        <button onClick={() => { if(window.confirm('Delete?')) onDeleteJob(job.id)}} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => { if (window.confirm('Delete?')) onDeleteJob(job.id) }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -481,45 +526,45 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
       </div>
 
       {isRegistryOpen && <RegistryView jobs={jobs} onClose={() => setIsRegistryOpen(false)} />}
-      
+
       {/* Completion Modal */}
       {isCompletionModalOpen && (
         <div className="fixed inset-0 bg-slate-900/70 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-           <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center animate-in zoom-in-95 duration-200">
-              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Job Completed!</h3>
-              <p className="text-sm text-slate-500 mb-6">Do you want to upload the final translated document now? This allows you to download it later.</p>
-              
-              <input type="file" ref={completionFileRef} className="hidden" accept=".pdf,.doc,.docx" onChange={handleCompletionUpload} />
-              
-              <div className="space-y-3">
-                <button onClick={() => completionFileRef.current?.click()} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-medium flex items-center justify-center gap-2">
-                  <Upload className="w-4 h-4" /> Upload Final File
-                </button>
-                <button onClick={() => {
-                   // Save without file
-                   if (pendingCompletionJob) {
-                      if(editingJob) onUpdateJob(pendingCompletionJob);
-                      else onAddJob(pendingCompletionJob);
-                   }
-                   setIsCompletionModalOpen(false);
-                   setPendingCompletionJob(null);
-                   closeForm();
-                }} className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 py-2.5 rounded-lg font-medium">
-                   Skip & Save
-                </button>
-              </div>
-           </div>
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Job Completed!</h3>
+            <p className="text-sm text-slate-500 mb-6">Do you want to upload the final translated document now? This allows you to download it later.</p>
+
+            <input type="file" ref={completionFileRef} className="hidden" accept=".pdf,.doc,.docx" onChange={handleCompletionUpload} />
+
+            <div className="space-y-3">
+              <button onClick={() => completionFileRef.current?.click()} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-medium flex items-center justify-center gap-2">
+                <Upload className="w-4 h-4" /> Upload Final File
+              </button>
+              <button onClick={() => {
+                // Save without file
+                if (pendingCompletionJob) {
+                  if (editingJob) onUpdateJob(pendingCompletionJob);
+                  else onAddJob(pendingCompletionJob);
+                }
+                setIsCompletionModalOpen(false);
+                setPendingCompletionJob(null);
+                closeForm();
+              }} className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 py-2.5 rounded-lg font-medium">
+                Skip & Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {previewImage && (
         <div className="fixed inset-0 z-[100] bg-slate-900/90 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setPreviewImage(null)}>
           <div className="relative max-w-4xl max-h-full bg-white rounded-lg overflow-hidden p-2">
-             <img src={previewImage} alt="Preview" className="max-w-full max-h-[85vh] object-contain" />
-             <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 bg-white/90 text-slate-900 p-2 rounded-full hover:bg-white transition shadow-md"><X className="w-5 h-5" /></button>
+            <img src={previewImage} alt="Preview" className="max-w-full max-h-[85vh] object-contain" />
+            <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 bg-white/90 text-slate-900 p-2 rounded-full hover:bg-white transition shadow-md"><X className="w-5 h-5" /></button>
           </div>
         </div>
       )}
@@ -567,7 +612,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
               }
             }
           `}</style>
-          
+
           <div className="bg-white px-6 py-3 flex justify-between items-center border-b border-slate-200 shrink-0 shadow-sm z-30">
             <div>
               <h2 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Languages className="w-5 h-5 text-primary-600" /> {t.editorWorkbench}</h2>
@@ -582,226 +627,222 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
 
           <div className="flex-1 flex overflow-hidden">
             <div className="w-1/3 lg:w-2/5 bg-slate-100 border-r border-slate-200 flex flex-col relative z-10">
-               <div className="flex-1 flex flex-col">
-                  {/* Source Image */}
-                  <div className="h-2/3 relative border-b border-slate-200">
-                     <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-white/90 p-1.5 rounded-lg shadow-sm backdrop-blur-sm">
-                          <button onClick={() => setRotation(r => r - 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCcw className="w-4 h-4" /></button>
-                          <button onClick={() => setRotation(r => r + 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCw className="w-4 h-4" /></button>
-                          <div className="w-px h-4 bg-slate-300 mx-1"></div>
-                          <button onClick={() => workbenchJob.attachments && setPreviewImage(workbenchJob.attachments[0])} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Maximize2 className="w-4 h-4" /></button>
-                     </div>
-                     <div className="w-full h-full overflow-hidden flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
-                       {workbenchJob.attachments && workbenchJob.attachments.length > 0 ? (
-                         <img src={workbenchJob.attachments[0]} alt="Source" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.3s ease', maxWidth: '100%', maxHeight: '100%' }} className="object-contain shadow-lg rounded-sm bg-white"/>
-                       ) : (
-                         <div className="text-center text-slate-400"><FileText className="w-12 h-12 mx-auto mb-2 opacity-50" /><p>No document uploaded.</p></div>
-                       )}
-                     </div>
+              <div className="flex-1 flex flex-col">
+                {/* Source Image */}
+                <div className="h-2/3 relative border-b border-slate-200">
+                  <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-white/90 p-1.5 rounded-lg shadow-sm backdrop-blur-sm">
+                    <button onClick={() => setRotation(r => r - 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCcw className="w-4 h-4" /></button>
+                    <button onClick={() => setRotation(r => r + 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCw className="w-4 h-4" /></button>
+                    <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                    <button onClick={() => workbenchJob.attachments && setPreviewImage(workbenchJob.attachments[0])} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Maximize2 className="w-4 h-4" /></button>
                   </div>
-                  
-                  {/* Translation Tools Panel */}
-                  <div className="flex-1 bg-white flex flex-col">
-                    <div className="p-2 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase text-slate-500 flex items-center gap-2">
-                      <Database className="w-3 h-3" /> {t.tools}
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                       {/* Glossary Matches */}
-                       <div>
-                         <h4 className="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1"><BookOpen className="w-3 h-3"/> {t.glossary}</h4>
-                         {glossaryMatches.length > 0 ? (
-                           <div className="space-y-1">
-                             {glossaryMatches.map(term => (
-                               <div key={term.id} className="text-xs bg-indigo-50 border border-indigo-100 p-1.5 rounded flex justify-between">
-                                 <span className="text-slate-600">{term.source}</span>
-                                 <span className="font-bold text-indigo-700">{term.target}</span>
-                               </div>
-                             ))}
-                           </div>
-                         ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
-                       </div>
+                  <div className="w-full h-full overflow-hidden flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+                    {workbenchJob.attachments && workbenchJob.attachments.length > 0 ? (
+                      <img src={workbenchJob.attachments[0]} alt="Source" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.3s ease', maxWidth: '100%', maxHeight: '100%' }} className="object-contain shadow-lg rounded-sm bg-white" />
+                    ) : (
+                      <div className="text-center text-slate-400"><FileText className="w-12 h-12 mx-auto mb-2 opacity-50" /><p>No document uploaded.</p></div>
+                    )}
+                  </div>
+                </div>
 
-                       {/* TM Matches */}
-                       <div>
-                         <h4 className="text-xs font-bold text-emerald-600 mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3"/> {t.tmMatches}</h4>
-                         {tmMatches.length > 0 ? (
-                            <div className="space-y-2">
-                              {tmMatches.map(tm => (
-                                <div key={tm.id} className="text-xs bg-emerald-50 border border-emerald-100 p-2 rounded cursor-pointer hover:bg-emerald-100" onClick={() => document.execCommand('insertText', false, tm.targetSegment)}>
-                                   <p className="text-slate-500 mb-1 line-clamp-2">{tm.sourceSegment}</p>
-                                   <p className="font-bold text-emerald-800 border-t border-emerald-200 pt-1">{tm.targetSegment}</p>
-                                </div>
-                              ))}
+                {/* Translation Tools Panel */}
+                <div className="flex-1 bg-white flex flex-col">
+                  <div className="p-2 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase text-slate-500 flex items-center gap-2">
+                    <Database className="w-3 h-3" /> {t.tools}
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                    {/* Glossary Matches */}
+                    <div>
+                      <h4 className="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1"><BookOpen className="w-3 h-3" /> {t.glossary}</h4>
+                      {glossaryMatches.length > 0 ? (
+                        <div className="space-y-1">
+                          {glossaryMatches.map(term => (
+                            <div key={term.id} className="text-xs bg-indigo-50 border border-indigo-100 p-1.5 rounded flex justify-between">
+                              <span className="text-slate-600">{term.source}</span>
+                              <span className="font-bold text-indigo-700">{term.target}</span>
                             </div>
-                         ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
-                       </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
+                    </div>
 
-                       {/* AI Translation Helper - Always visible */}
-                       <div>
-                         <AITranslationHelper
-                           sourceText={workbenchJob.attachments?.[0] ? "Source document" : undefined}
-                           targetText={editorRef.current?.innerText || ''}
-                           sourceLang={workbenchJob.sourceLang}
-                           targetLang={workbenchJob.targetLang}
-                           onSuggestion={(suggestion) => {
-                             setAiEmailSuggestion(suggestion);
-                             setIsEmailModalOpen(true);
-                           }}
-                         />
-                       </div>
+                    {/* TM Matches */}
+                    <div>
+                      <h4 className="text-xs font-bold text-emerald-600 mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> {t.tmMatches}</h4>
+                      {tmMatches.length > 0 ? (
+                        <div className="space-y-2">
+                          {tmMatches.map(tm => (
+                            <div key={tm.id} className="text-xs bg-emerald-50 border border-emerald-100 p-2 rounded cursor-pointer hover:bg-emerald-100" onClick={() => document.execCommand('insertText', false, tm.targetSegment)}>
+                              <p className="text-slate-500 mb-1 line-clamp-2">{tm.sourceSegment}</p>
+                              <p className="font-bold text-emerald-800 border-t border-emerald-200 pt-1">{tm.targetSegment}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
+                    </div>
+
+                    {/* AI Translation Helper - Always visible */}
+                    <div>
+                      <AITranslationHelper
+                        sourceText={workbenchJob.attachments?.[0] ? "Source document" : undefined}
+                        targetText={editorRef.current?.innerText || ''}
+                        sourceLang={workbenchJob.sourceLang}
+                        targetLang={workbenchJob.targetLang}
+                      />
                     </div>
                   </div>
-               </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex-1 bg-slate-200 flex flex-col relative overflow-hidden">
-               {/* Enhanced Word-like Toolbar */}
-               <div className="border-b border-slate-300 bg-white z-10 shadow-sm">
-                  {/* First Row - Font & Size */}
-                  <div className="px-3 py-2 border-b border-slate-200 flex items-center gap-2 flex-wrap">
-                      {/* Font Family */}
-                      <select 
-                        value={fontFamily} 
-                        onChange={(e) => {
-                          setFontFamily(e.target.value);
-                          document.execCommand('fontName', false, e.target.value);
-                        }}
-                        className="px-2 py-1 border border-slate-300 rounded text-xs focus:ring-2 focus:ring-primary-500"
-                      >
-                        <option value="Times New Roman">Times New Roman</option>
-                        <option value="Arial">Arial</option>
-                        <option value="Calibri">Calibri</option>
-                        <option value="Garamond">Garamond</option>
-                        <option value="Georgia">Georgia</option>
-                        <option value="Verdana">Verdana</option>
-                        <option value="Courier New">Courier New</option>
-                      </select>
+              {/* Enhanced Word-like Toolbar */}
+              <div className="border-b border-slate-300 bg-white z-10 shadow-sm">
+                {/* First Row - Font & Size */}
+                <div className="px-3 py-2 border-b border-slate-200 flex items-center gap-2 flex-wrap">
+                  {/* Font Family */}
+                  <select
+                    value={fontFamily}
+                    onChange={(e) => {
+                      setFontFamily(e.target.value);
+                      document.execCommand('fontName', false, e.target.value);
+                    }}
+                    className="px-2 py-1 border border-slate-300 rounded text-xs focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Calibri">Calibri</option>
+                    <option value="Garamond">Garamond</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Courier New">Courier New</option>
+                  </select>
 
-                      {/* Font Size */}
-                      <select 
-                        value={fontSize}
-                        onChange={(e) => {
-                          const size = parseInt(e.target.value);
-                          setFontSize(size);
-                          document.execCommand('fontSize', false, '7');
-                          const fontElements = document.querySelectorAll('font[size="7"]');
-                          fontElements.forEach(el => {
-                            (el as HTMLElement).removeAttribute('size');
-                            (el as HTMLElement).style.fontSize = `${size}pt`;
-                          });
-                        }}
-                        className="px-2 py-1 border border-slate-300 rounded text-xs w-16 focus:ring-2 focus:ring-primary-500"
-                      >
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                        <option value="11">11</option>
-                        <option value="12">12</option>
-                        <option value="14">14</option>
-                        <option value="16">16</option>
-                        <option value="18">18</option>
-                        <option value="20">20</option>
-                        <option value="24">24</option>
-                      </select>
+                  {/* Font Size */}
+                  <select
+                    value={fontSize}
+                    onChange={(e) => {
+                      const size = parseInt(e.target.value);
+                      setFontSize(size);
+                      document.execCommand('fontSize', false, '7');
+                      const fontElements = document.querySelectorAll('font[size="7"]');
+                      fontElements.forEach(el => {
+                        (el as HTMLElement).removeAttribute('size');
+                        (el as HTMLElement).style.fontSize = `${size}pt`;
+                      });
+                    }}
+                    className="px-2 py-1 border border-slate-300 rounded text-xs w-16 focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12">12</option>
+                    <option value="14">14</option>
+                    <option value="16">16</option>
+                    <option value="18">18</option>
+                    <option value="20">20</option>
+                    <option value="24">24</option>
+                  </select>
 
-                      {/* Text Color */}
-                      <div className="flex items-center gap-1 border border-slate-300 rounded p-1">
-                        <Type className="w-3.5 h-3.5 text-slate-600" />
-                        <input 
-                          type="color" 
-                          value={textColor}
-                          onChange={(e) => {
-                            setTextColor(e.target.value);
-                            document.execCommand('foreColor', false, e.target.value);
-                          }}
-                          className="w-6 h-6 cursor-pointer"
-                          title="Text color"
-                        />
-                      </div>
-
-                      {/* Background Color */}
-                      <div className="flex items-center gap-1 border border-slate-300 rounded p-1">
-                        <Highlighter className="w-3.5 h-3.5 text-slate-600" />
-                        <input 
-                          type="color" 
-                          value={bgColor === 'transparent' ? '#ffffff' : bgColor}
-                          onChange={(e) => {
-                            setBgColor(e.target.value);
-                            document.execCommand('hiliteColor', false, e.target.value);
-                          }}
-                          className="w-6 h-6 cursor-pointer"
-                          title="Highlight color"
-                        />
-                      </div>
+                  {/* Text Color */}
+                  <div className="flex items-center gap-1 border border-slate-300 rounded p-1">
+                    <Type className="w-3.5 h-3.5 text-slate-600" />
+                    <input
+                      type="color"
+                      value={textColor}
+                      onChange={(e) => {
+                        setTextColor(e.target.value);
+                        document.execCommand('foreColor', false, e.target.value);
+                      }}
+                      className="w-6 h-6 cursor-pointer"
+                      title="Text color"
+                    />
                   </div>
 
-                  {/* Second Row - Format ting */}
-                  <div className="px-3 py-2 flex items-center gap-2 flex-wrap bg-slate-50">
-                      {/* Text Style */}
-                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                        <button onClick={() => executeCommand('bold')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Bold (Ctrl+B)"><Bold className="w-4 h-4" /></button>
-                        <button onClick={() => executeCommand('italic')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Italic (Ctrl+I)"><Italic className="w-4 h-4" /></button>
-                        <button onClick={() => executeCommand('underline')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Underline (Ctrl+U)"><Underline className="w-4 h-4" /></button>
-                      </div>
-
-                      {/* Alignment */}
-                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                        <button onClick={() => executeCommand('justifyLeft')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Align Left"><AlignLeft className="w-4 h-4" /></button>
-                        <button onClick={() => executeCommand('justifyCenter')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Center"><AlignCenter className="w-4 h-4" /></button>
-                        <button onClick={() => executeCommand('justifyRight')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Align Right"><AlignRight className="w-4 h-4" /></button>
-                        <button onClick={() => executeCommand('justifyFull')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Justify"><AlignJustify className="w-4 h-4" /></button>
-                      </div>
-
-                      {/* Lists */}
-                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                        <button onClick={() => executeCommand('insertUnorderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Bullet List"><ListIcon className="w-4 h-4" /></button>
-                        <button onClick={() => executeCommand('insertOrderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Numbered List"><ListOrdered className="w-4 h-4" /></button>
-                      </div>
-
-                      {/* Indentation */}
-                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                        <button onClick={() => executeCommand('indent')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 text-xs font-bold" title="Increase Indent">→</button>
-                        <button onClick={() => executeCommand('outdent')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 text-xs font-bold" title="Decrease Indent">←</button>
-                      </div>
-
-                      {/* Page Orientation */}
-                      <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                         <button onClick={() => setTargetOrientation('portrait')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'portrait' ? 'bg-primary-600 text-white' : 'text-slate-500'}`} title="Portrait">📄</button>
-                         <button onClick={() => setTargetOrientation('landscape')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'landscape' ? 'bg-primary-600 text-white' : 'text-slate-500'}`} title="Landscape">📃</button>
-                      </div>
-
-                      {/* Zoom */}
-                      <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm">
-                         <button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomOut className="w-3.5 h-3.5" /></button>
-                         <span className="text-[10px] w-10 text-center font-medium text-slate-600">{Math.round(zoomLevel * 100)}%</span>
-                         <button onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
-                      </div>
-
-                      <div className="ml-auto">
-                        <button onClick={triggerWorkbenchAi} disabled={isAiTranslating || !workbenchJob.attachments?.length} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
-                          <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : t.autoTranslate}
-                        </button>
-                      </div>
+                  {/* Background Color */}
+                  <div className="flex items-center gap-1 border border-slate-300 rounded p-1">
+                    <Highlighter className="w-3.5 h-3.5 text-slate-600" />
+                    <input
+                      type="color"
+                      value={bgColor === 'transparent' ? '#ffffff' : bgColor}
+                      onChange={(e) => {
+                        setBgColor(e.target.value);
+                        document.execCommand('hiliteColor', false, e.target.value);
+                      }}
+                      className="w-6 h-6 cursor-pointer"
+                      title="Highlight color"
+                    />
                   </div>
-               </div>
-               
-               <div className="flex-1 relative overflow-auto bg-slate-200 p-8 flex justify-center items-start">
-                 {isAiTranslating && (
-                   <div className="absolute inset-0 z-50 bg-slate-900/20 backdrop-blur-[1px] flex flex-col items-center justify-center">
-                      <div className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
-                        <RefreshCw className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
-                        <p className="font-bold text-slate-800">Translating Document...</p>
-                        <p className="text-xs text-slate-500 mt-1">Applying Sworn Translation Standards</p>
-                      </div>
-                   </div>
-                 )}
-                 <div className="origin-top transition-transform duration-200 ease-out" style={{ transform: `scale(${zoomLevel})` }}>
-                   <div ref={editorRef} contentEditable suppressContentEditableWarning 
-                      className={`editor-content bg-white text-slate-900 shadow-xl outline-none p-[20mm] ${targetOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'}`} 
-                      style={{ height: 'auto' }} 
-                      dangerouslySetInnerHTML={{ __html: workbenchJob.translatedText || '<div class="text-slate-300 italic text-center mt-20">Click "Auto-Translate" to generate content...</div>' }} />
-                 </div>
-               </div>
+                </div>
+
+                {/* Second Row - Format ting */}
+                <div className="px-3 py-2 flex items-center gap-2 flex-wrap bg-slate-50">
+                  {/* Text Style */}
+                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                    <button onClick={() => executeCommand('bold')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Bold (Ctrl+B)"><Bold className="w-4 h-4" /></button>
+                    <button onClick={() => executeCommand('italic')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Italic (Ctrl+I)"><Italic className="w-4 h-4" /></button>
+                    <button onClick={() => executeCommand('underline')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Underline (Ctrl+U)"><Underline className="w-4 h-4" /></button>
+                  </div>
+
+                  {/* Alignment */}
+                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                    <button onClick={() => executeCommand('justifyLeft')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Align Left"><AlignLeft className="w-4 h-4" /></button>
+                    <button onClick={() => executeCommand('justifyCenter')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Center"><AlignCenter className="w-4 h-4" /></button>
+                    <button onClick={() => executeCommand('justifyRight')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Align Right"><AlignRight className="w-4 h-4" /></button>
+                    <button onClick={() => executeCommand('justifyFull')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Justify"><AlignJustify className="w-4 h-4" /></button>
+                  </div>
+
+                  {/* Lists */}
+                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                    <button onClick={() => executeCommand('insertUnorderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Bullet List"><ListIcon className="w-4 h-4" /></button>
+                    <button onClick={() => executeCommand('insertOrderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Numbered List"><ListOrdered className="w-4 h-4" /></button>
+                  </div>
+
+                  {/* Indentation */}
+                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                    <button onClick={() => executeCommand('indent')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 text-xs font-bold" title="Increase Indent">→</button>
+                    <button onClick={() => executeCommand('outdent')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 text-xs font-bold" title="Decrease Indent">←</button>
+                  </div>
+
+                  {/* Page Orientation */}
+                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                    <button onClick={() => setTargetOrientation('portrait')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'portrait' ? 'bg-primary-600 text-white' : 'text-slate-500'}`} title="Portrait">📄</button>
+                    <button onClick={() => setTargetOrientation('landscape')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'landscape' ? 'bg-primary-600 text-white' : 'text-slate-500'}`} title="Landscape">📃</button>
+                  </div>
+
+                  {/* Zoom */}
+                  <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm">
+                    <button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomOut className="w-3.5 h-3.5" /></button>
+                    <span className="text-[10px] w-10 text-center font-medium text-slate-600">{Math.round(zoomLevel * 100)}%</span>
+                    <button onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
+                  </div>
+
+                  <div className="ml-auto">
+                    <button onClick={triggerWorkbenchAi} disabled={isAiTranslating || !workbenchJob.attachments?.length} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
+                      <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : t.autoTranslate}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 relative overflow-auto bg-slate-200 p-8 flex justify-center items-start">
+                {isAiTranslating && (
+                  <div className="absolute inset-0 z-50 bg-slate-900/20 backdrop-blur-[1px] flex flex-col items-center justify-center">
+                    <div className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
+                      <RefreshCw className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
+                      <p className="font-bold text-slate-800">Translating Document...</p>
+                      <p className="text-xs text-slate-500 mt-1">Applying Sworn Translation Standards</p>
+                    </div>
+                  </div>
+                )}
+                <div className="origin-top transition-transform duration-200 ease-out" style={{ transform: `scale(${zoomLevel})` }}>
+                  <div ref={editorRef} contentEditable suppressContentEditableWarning
+                    className={`editor-content bg-white text-slate-900 shadow-xl outline-none p-[20mm] ${targetOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'}`}
+                    style={{ height: 'auto' }}
+                    dangerouslySetInnerHTML={{ __html: workbenchJob.translatedText || '<div class="text-slate-300 italic text-center mt-20">Click "Auto-Translate" to generate content...</div>' }} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -816,36 +857,36 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
             </div>
             <div className="flex-1 overflow-y-auto p-6">
               <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.creationDate}</label><input required type="date" className={inputClass} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} /></div>
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">{t.dueDateLabel}</label><input type="date" className={inputClass} value={formData.dueDate || ''} onChange={e => setFormData({...formData, dueDate: e.target.value})} /></div>
+                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.creationDate}</label><input required type="date" className={inputClass} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} /></div>
+                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">{t.dueDateLabel}</label><input type="date" className={inputClass} value={formData.dueDate || ''} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} /></div>
                 <div className="col-span-2 md:col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.clientName}</label><input required list="client-list" type="text" placeholder="e.g., John Doe Corp" className={inputClass} value={formData.clientName || ''} onChange={handleClientSelect} /><datalist id="client-list">{uniqueClients.map(([name]) => (<option key={name} value={name} />))}</datalist></div>
-                <div className="col-span-2 md:col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.clientInfo}</label><input type="text" placeholder="Address / Tax ID" className={inputClass} value={formData.clientInfo || ''} onChange={e => setFormData({...formData, clientInfo: e.target.value})} /></div>
-                <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">{t.docType}</label><input required type="text" placeholder="e.g., Marriage Certificate" className={inputClass} value={formData.documentType || ''} onChange={e => setFormData({...formData, documentType: e.target.value})} /></div>
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.sourceLang}</label><select className={inputClass} value={formData.sourceLang} onChange={e => setFormData({...formData, sourceLang: e.target.value})}>{Object.values(Language).map(l => <option key={l} value={l}>{l}</option>)}</select></div>
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.targetLang}</label><select className={inputClass} value={formData.targetLang} onChange={e => setFormData({...formData, targetLang: e.target.value})}>{Object.values(Language).map(l => <option key={l} value={l}>{l}</option>)}</select></div>
-                
+                <div className="col-span-2 md:col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.clientInfo}</label><input type="text" placeholder="Address / Tax ID" className={inputClass} value={formData.clientInfo || ''} onChange={e => setFormData({ ...formData, clientInfo: e.target.value })} /></div>
+                <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">{t.docType}</label><input required type="text" placeholder="e.g., Marriage Certificate" className={inputClass} value={formData.documentType || ''} onChange={e => setFormData({ ...formData, documentType: e.target.value })} /></div>
+                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.sourceLang}</label><select className={inputClass} value={formData.sourceLang} onChange={e => setFormData({ ...formData, sourceLang: e.target.value })}>{Object.values(Language).map(l => <option key={l} value={l}>{l}</option>)}</select></div>
+                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.targetLang}</label><select className={inputClass} value={formData.targetLang} onChange={e => setFormData({ ...formData, targetLang: e.target.value })}>{Object.values(Language).map(l => <option key={l} value={l}>{l}</option>)}</select></div>
+
                 {/* Batch Upload Section */}
                 <div className="col-span-2">
-                   <label className="block text-sm font-medium text-slate-700 mb-2">{t.batchUpload}</label>
-                   <div className="flex flex-wrap gap-3 mb-2">
-                      {formData.attachments && formData.attachments.map((src, idx) => (
-                        <div key={idx} className="relative w-24 h-24 group">
-                           <img src={src} alt="Attachment" className="w-full h-full object-cover rounded-lg border border-slate-200 shadow-sm" />
-                           <button type="button" onClick={() => removeAttachment(idx)} className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
-                        </div>
-                      ))}
-                      <button type="button" onClick={() => fileInputRef.current?.click()} className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-primary-500 hover:text-primary-500 transition-colors bg-slate-50 hover:bg-primary-50">
-                         <FolderOpen className="w-5 h-5" />
-                         <span className="text-[10px] font-medium mt-1">{t.addPhoto}</span>
-                      </button>
-                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleFileChange} />
-                   </div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">{t.batchUpload}</label>
+                  <div className="flex flex-wrap gap-3 mb-2">
+                    {formData.attachments && formData.attachments.map((src, idx) => (
+                      <div key={idx} className="relative w-24 h-24 group">
+                        <img src={src} alt="Attachment" className="w-full h-full object-cover rounded-lg border border-slate-200 shadow-sm" />
+                        <button type="button" onClick={() => removeAttachment(idx)} className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-primary-500 hover:text-primary-500 transition-colors bg-slate-50 hover:bg-primary-50">
+                      <FolderOpen className="w-5 h-5" />
+                      <span className="text-[10px] font-medium mt-1">{t.addPhoto}</span>
+                    </button>
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleFileChange} />
+                  </div>
                 </div>
 
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.pageCount}</label><input type="number" min="1" className={inputClass} value={formData.pageCount} onChange={e => setFormData({...formData, pageCount: parseInt(e.target.value)})} /></div>
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.totalPrice} (TND)</label><div className="relative"><span className="absolute left-3 top-2 text-slate-500 font-bold text-xs">TND</span><input required type="number" min="0" step="0.001" className={`${inputClass} pl-10`} value={formData.priceTotal} onChange={e => setFormData({...formData, priceTotal: parseFloat(e.target.value)})} /></div></div>
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.status}</label><select className={inputClass} value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as TranslationStatus})}>{Object.values(TranslationStatus).map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-                <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">{t.remarks}</label><textarea className={`${inputClass} h-20`} value={formData.remarks || ''} onChange={e => setFormData({...formData, remarks: e.target.value})}></textarea></div>
+                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.pageCount}</label><input type="number" min="1" className={inputClass} value={formData.pageCount} onChange={e => setFormData({ ...formData, pageCount: parseInt(e.target.value) })} /></div>
+                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.totalPrice} (TND)</label><div className="relative"><span className="absolute left-3 top-2 text-slate-500 font-bold text-xs">TND</span><input required type="number" min="0" step="0.001" className={`${inputClass} pl-10`} value={formData.priceTotal} onChange={e => setFormData({ ...formData, priceTotal: parseFloat(e.target.value) })} /></div></div>
+                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.status}</label><select className={inputClass} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as TranslationStatus })}>{Object.values(TranslationStatus).map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">{t.remarks}</label><textarea className={`${inputClass} h-20`} value={formData.remarks || ''} onChange={e => setFormData({ ...formData, remarks: e.target.value })}></textarea></div>
                 <input type="submit" className="hidden" />
               </form>
             </div>
@@ -857,12 +898,172 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
         </div>
       )}
 
-      {/* AI Email Suggestion Modal */}
-      <EmailSuggestionModal
-        isOpen={isEmailModalOpen}
-        onClose={() => setIsEmailModalOpen(false)}
-        emailContent={aiEmailSuggestion}
-      />
+      {/* Workbench Modal */}
+      {workbenchJob && (
+        <div className="fixed inset-0 z-[80] bg-white flex flex-col animate-in fade-in duration-200">
+          <style>{`
+            /* WORD DOCUMENT STYLING - WORD ALIKE */
+            .editor-content {
+              font-family: "Times New Roman", Times, serif !important;
+              font-size: 12pt;
+              line-height: 1.15; /* Word Default */
+              color: black;
+              /* Simulating Page Break visually repeating every 297mm */
+              background-image: linear-gradient(to bottom, transparent 99.8%, #cbd5e1 99.8%, #cbd5e1 100%);
+              background-size: 100% 297mm;
+            }
+            .editor-content h1 { font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 12px; text-transform: uppercase; margin-top: 0; }
+            .editor-content h2 { font-size: 14pt; font-weight: bold; margin-top: 12px; margin-bottom: 6px; }
+            .editor-content p { margin-bottom: 8px; text-align: justify; margin-top: 0; }
+            
+            /* TABLES - STRICT */
+            .editor-content table { 
+              width: 100% !important; 
+              border-collapse: collapse !important; 
+              border: 1px solid black !important;
+              margin-bottom: 12px;
+              table-layout: fixed; 
+            }
+            .editor-content td, .editor-content th { 
+              border: 1px solid black !important; 
+              padding: 4px 6px; 
+              vertical-align: top;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
+            }
+
+            @media print {
+              .editor-content {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                background: none !important;
+              }
+            }
+          `}</style>
+
+          <div className="bg-white px-6 py-3 flex justify-between items-center border-b border-slate-200 shrink-0 shadow-sm z-30">
+            <div>
+              <h2 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Languages className="w-5 h-5 text-primary-600" /> {t.editorWorkbench}</h2>
+              <p className="text-xs text-slate-500">{workbenchJob.clientName} • {workbenchJob.documentType}</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={downloadAsWord} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><FileDown className="w-4 h-4" /> {t.downloadDoc}</button>
+              <button onClick={handleWorkbenchSave} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><Save className="w-4 h-4" /> {t.save}</button>
+              <button onClick={closeWorkbench} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors">{t.close}</button>
+            </div>
+          </div>
+
+          <div className="flex-1 flex overflow-hidden">
+            <div className="w-1/3 lg:w-2/5 bg-slate-100 border-r border-slate-200 flex flex-col relative z-10">
+              <div className="flex-1 flex flex-col">
+                {/* Source Image */}
+                <div className="h-2/3 relative border-b border-slate-200">
+                  <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-white/90 p-1.5 rounded-lg shadow-sm backdrop-blur-sm">
+                    <button onClick={() => setRotation(r => r - 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCcw className="w-4 h-4" /></button>
+                    <button onClick={() => setRotation(r => r + 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCw className="w-4 h-4" /></button>
+                    <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                    <button onClick={() => workbenchJob.attachments && setPreviewImage(workbenchJob.attachments[0])} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Maximize2 className="w-4 h-4" /></button>
+                  </div>
+                  <div className="w-full h-full overflow-hidden flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+                    {workbenchJob.attachments && workbenchJob.attachments.length > 0 ? (
+                      <img src={workbenchJob.attachments[0]} alt="Source" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.3s ease', maxWidth: '100%', maxHeight: '100%' }} className="object-contain shadow-lg rounded-sm bg-white" />
+                    ) : (
+                      <div className="text-center text-slate-400"><FileText className="w-12 h-12 mx-auto mb-2 opacity-50" /><p>No document uploaded.</p></div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Translation Tools Panel */}
+                <div className="flex-1 bg-white flex flex-col">
+                  <div className="p-2 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase text-slate-500 flex items-center gap-2">
+                    <Database className="w-3 h-3" /> {t.tools}
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                    {/* Glossary Matches */}
+                    <div>
+                      <h4 className="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1"><BookOpen className="w-3 h-3" /> {t.glossary}</h4>
+                      {glossaryMatches.length > 0 ? (
+                        <div className="space-y-1">
+                          {glossaryMatches.map(term => (
+                            <div key={term.id} className="text-xs bg-indigo-50 border border-indigo-100 p-1.5 rounded flex justify-between">
+                              <span className="text-slate-600">{term.source}</span>
+                              <span className="font-bold text-indigo-700">{term.target}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
+                    </div>
+
+                    {/* TM Matches */}
+                    <div>
+                      <h4 className="text-xs font-bold text-emerald-600 mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> {t.tmMatches}</h4>
+                      {tmMatches.length > 0 ? (
+                        <div className="space-y-2">
+                          {tmMatches.map(tm => (
+                            <div key={tm.id} className="text-xs bg-emerald-50 border border-emerald-100 p-2 rounded cursor-pointer hover:bg-emerald-100" onClick={() => document.execCommand('insertText', false, tm.targetSegment)}>
+                              <p className="text-slate-500 mb-1 line-clamp-2">{tm.sourceSegment}</p>
+                              <p className="font-bold text-emerald-800 border-t border-emerald-200 pt-1">{tm.targetSegment}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 bg-slate-200 flex flex-col relative overflow-hidden">
+              <div className="p-2 border-b border-slate-300 flex flex-wrap gap-2 justify-between items-center bg-slate-100 z-10 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                    <button onClick={() => executeCommand('bold')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Bold className="w-4 h-4" /></button>
+                    <button onClick={() => executeCommand('italic')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Italic className="w-4 h-4" /></button>
+                    <button onClick={() => executeCommand('underline')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Underline className="w-4 h-4" /></button>
+                    <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                    <button onClick={() => executeCommand('justifyLeft')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignLeft className="w-4 h-4" /></button>
+                    <button onClick={() => executeCommand('justifyCenter')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignCenter className="w-4 h-4" /></button>
+                    <button onClick={() => executeCommand('justifyRight')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignRight className="w-4 h-4" /></button>
+                  </div>
+                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                    <button onClick={() => setTargetOrientation('portrait')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'portrait' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>{t.portrait}</button>
+                    <button onClick={() => setTargetOrientation('landscape')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'landscape' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>{t.landscape}</button>
+                  </div>
+                  <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm ml-2">
+                    <button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomOut className="w-3.5 h-3.5" /></button>
+                    <span className="text-[10px] w-8 text-center font-medium text-slate-600">{Math.round(zoomLevel * 100)}%</span>
+                    <button onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
+                  </div>
+                </div>
+                <button onClick={triggerWorkbenchAi} disabled={isAiTranslating || !workbenchJob.attachments?.length} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
+                  <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : t.autoTranslate}
+                </button>
+              </div>
+
+              <div className="flex-1 relative overflow-auto bg-slate-200 p-8 flex justify-center items-start">
+                {isAiTranslating && (
+                  <div className="absolute inset-0 z-50 bg-slate-900/20 backdrop-blur-[1px] flex flex-col items-center justify-center">
+                    <div className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
+                      <RefreshCw className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
+                      <p className="font-bold text-slate-800">Translating Document...</p>
+                      <p className="text-xs text-slate-500 mt-1">Applying Sworn Translation Standards</p>
+                    </div>
+                  </div>
+                )}
+                <div className="origin-top transition-transform duration-200 ease-out" style={{ transform: `scale(${zoomLevel})` }}>
+                  <div ref={editorRef} contentEditable suppressContentEditableWarning
+                    className={`editor-content bg-white text-slate-900 shadow-xl outline-none p-[20mm] ${targetOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'}`}
+                    style={{ height: 'auto' }}
+                    dangerouslySetInnerHTML={{ __html: workbenchJob.translatedText || '<div class="text-slate-300 italic text-center mt-20">Click "Auto-Translate" to generate content...</div>' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

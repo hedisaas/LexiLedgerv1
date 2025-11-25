@@ -57,19 +57,19 @@ export const generateSwornTranslation = async (
         ]
       },
       config: {
-        temperature: 0.1, 
+        temperature: 0.1,
         maxOutputTokens: 8192,
         safetySettings: [
-           { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-           { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-           { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-           { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
         ],
       }
     });
 
     let cleanText = response.text || "";
-    
+
     // 1. Clean Markdown
     cleanText = cleanText.replace(/```html/g, '').replace(/```/g, '').trim();
 
@@ -87,23 +87,41 @@ export const generateSwornTranslation = async (
   }
 };
 
+// Helper for exponential backoff
+const retryWithBackoff = async <T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error: any) {
+    if (retries === 0 || !error.message?.includes('429') && !error.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw error;
+    }
+    console.warn(`Gemini API rate limited. Retrying in ${delay}ms... (${retries} retries left)`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return retryWithBackoff(fn, retries - 1, delay * 2);
+  }
+};
+
 // General-purpose content generation for AI features
 export const generateContent = async (prompt: string): Promise<string> => {
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: prompt,
-      config: {
-        temperature: 0.7,
-        maxOutputTokens: 2048,
+  return retryWithBackoff(async () => {
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-exp',
+        contents: prompt,
+        config: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+        }
+      });
+      return response.text || "No response generated.";
+    } catch (error: any) {
+      console.error("Gemini Content Generation Error:", error);
+      if (error.message?.includes('RESOURCE_EXHAUSTED')) {
+        throw new Error("AI Usage Limit Reached. Please wait a moment and try again.");
       }
-    });
-
-    return response.text || "No response generated.";
-  } catch (error) {
-    console.error("Gemini Content Generation Error:", error);
-    throw new Error("Failed to generate content.");
-  }
+      throw error;
+    }
+  });
 };
 
 export const getFinancialInsights = async (
@@ -118,7 +136,7 @@ export const getFinancialInsights = async (
       amount: j.priceTotal,
       status: j.status
     }));
-    
+
     const simplifiedExpenses = expenses.map(e => ({
       date: e.date,
       category: e.category,
@@ -154,4 +172,68 @@ export const getFinancialInsights = async (
     console.error("Gemini Financial Insight Error:", error);
     return "Could not generate financial insights.";
   }
+};
+// --- AI Assistant Features ---
+
+export const checkTranslationQuality = async (source: string, target: string): Promise<string> => {
+  const prompt = `
+    Act as a senior translation editor.
+    Source Text: "${source}"
+    Target Text: "${target}"
+    
+    Task: Evaluate the translation quality.
+    1. Identify any accuracy errors (mistranslations, omissions).
+    2. Check for grammatical or stylistic issues.
+    3. Rate the quality (1-10).
+    4. Suggest improvements if necessary.
+    
+    Format: HTML (use <b>, <ul>, <li>, <br>). Keep it concise.
+  `;
+  return generateContent(prompt);
+};
+
+export const suggestTerminology = async (sourceText: string): Promise<string> => {
+  const prompt = `
+    Act as a terminologist.
+    Source Text: "${sourceText.substring(0, 1000)}..."
+    
+    Task: Extract 5-10 key technical, legal, or specialized terms and suggest translations (EN/FR/AR).
+    Format: HTML Table (Term | Suggestion | Context).
+  `;
+  return generateContent(prompt);
+};
+
+export const summarizeDocument = async (text: string): Promise<string> => {
+  const prompt = `
+    Act as an executive assistant.
+    Text: "${text.substring(0, 2000)}..."
+    
+    Task: Provide a concise summary of this document (max 3 bullet points).
+    Format: HTML (<ul>).
+  `;
+  return generateContent(prompt);
+};
+
+export const suggestPricing = async (details: string): Promise<string> => {
+  const prompt = `
+    Act as a translation project manager.
+    Project Details: "${details}"
+    
+    Task: Suggest a price range (in TND) and turnaround time.
+    Consider: Standard rates are ~25-40 TND per page. Urgent/Technical is higher.
+    Format: Plain text.
+  `;
+  return generateContent(prompt);
+};
+
+export const generateClientEmail = async (type: 'quote' | 'invoice' | 'reminder' | 'welcome', details: string): Promise<string> => {
+  const prompt = `
+    Act as a professional translator.
+    Email Type: ${type}
+    Details: "${details}"
+    
+    Task: Write a polite, professional email to the client in French (or English if specified).
+    Format: Plain text (Subject + Body).
+  `;
+  return generateContent(prompt);
 };

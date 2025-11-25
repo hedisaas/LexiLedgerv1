@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Database, Download, Upload, Trash2, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TMUnit, GlossaryTerm } from '../types';
+import { exportTMX, importTMX } from '../services/tmService';
 
 interface TranslationMemoryProps {
   lang: string;
@@ -13,6 +14,55 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
   const [glossary, setGlossary] = useState<GlossaryTerm[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportTMX = () => {
+    const tmxContent = exportTMX(tmUnits);
+    const blob = new Blob([tmxContent], { type: 'text/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lexiledger_tm_${new Date().toISOString().split('T')[0]}.tmx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportTMX = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const content = e.target?.result as string;
+      if (content) {
+        try {
+          const newUnits = await importTMX(content);
+          // Save to Supabase
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user && newUnits.length > 0) {
+            const { error } = await supabase.from('tm_units').insert(
+              newUnits.map(u => ({
+                user_id: user.id,
+                source_segment: u.sourceSegment,
+                target_segment: u.targetSegment,
+                lang_pair: u.langPair,
+                timestamp: u.timestamp
+              }))
+            );
+            if (error) throw error;
+            alert(`Successfully imported ${newUnits.length} translation units.`);
+            fetchData();
+          }
+        } catch (error) {
+          console.error("Import failed:", error);
+          alert("Failed to import TMX file.");
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // Add new TM entry form
   const [newTM, setNewTM] = useState({
@@ -40,9 +90,9 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
           .from('tm_units')
           .select('*')
           .order('timestamp', { ascending: false });
-        
+
         if (error) throw error;
-        
+
         // Map snake_case to camelCase
         const mappedData = (data || []).map(item => ({
           id: item.id,
@@ -51,14 +101,14 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
           langPair: item.lang_pair,
           timestamp: item.timestamp
         }));
-        
+
         setTmUnits(mappedData);
       } else {
         const { data, error } = await supabase
           .from('glossary_terms')
           .select('*')
           .order('created_at', { ascending: false });
-        
+
         if (error) throw error;
         setGlossary(data || []);
       }
@@ -71,7 +121,7 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
 
   const addTMEntry = async () => {
     if (!newTM.sourceSegment || !newTM.targetSegment) return;
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -87,7 +137,7 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
         }]);
 
       if (error) throw error;
-      
+
       setNewTM({ sourceSegment: '', targetSegment: '', langPair: 'en-fr' });
       fetchData();
     } catch (error) {
@@ -97,7 +147,7 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
 
   const addGlossaryTerm = async () => {
     if (!newGlossary.source || !newGlossary.target) return;
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -112,7 +162,7 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
         }]);
 
       if (error) throw error;
-      
+
       setNewGlossary({ source: '', target: '', langPair: 'en-fr' });
       fetchData();
     } catch (error) {
@@ -131,7 +181,7 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
     }
   };
 
-  const filteredTM = tmUnits.filter(tm => 
+  const filteredTM = tmUnits.filter(tm =>
     (tm.sourceSegment || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (tm.targetSegment || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -143,31 +193,40 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
 
   return (
     <div className="max-w-6xl">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Translation Resources</h2>
-        <p className="text-slate-600">Manage your translation memory and terminology glossary</p>
+      <div className="mb-6 flex justify-between items-end">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Translation Resources</h2>
+          <p className="text-slate-600">Manage your translation memory and terminology glossary</p>
+        </div>
+        <div className="flex gap-2">
+          <input type="file" ref={fileInputRef} onChange={handleImportTMX} accept=".tmx,.xml" className="hidden" />
+          <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+            <Upload className="w-4 h-4" /> Import TMX
+          </button>
+          <button onClick={handleExportTMX} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+            <Download className="w-4 h-4" /> Export TMX
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-slate-200">
         <button
           onClick={() => setActiveTab('tm')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'tm'
-              ? 'text-primary-600 border-b-2 border-primary-600'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-4 py-2 font-medium transition-colors ${activeTab === 'tm'
+            ? 'text-primary-600 border-b-2 border-primary-600'
+            : 'text-slate-600 hover:text-slate-900'
+            }`}
         >
           <Database className="w-4 h-4 inline mr-2" />
           Translation Memory
         </button>
         <button
           onClick={() => setActiveTab('glossary')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'glossary'
-              ? 'text-primary-600 border-b-2 border-primary-600'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
+          className={`px-4 py-2 font-medium transition-colors ${activeTab === 'glossary'
+            ? 'text-primary-600 border-b-2 border-primary-600'
+            : 'text-slate-600 hover:text-slate-900'
+            }`}
         >
           <Search className="w-4 h-4 inline mr-2" />
           Glossary
@@ -194,144 +253,144 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
           <Plus className="w-4 h-4" />
           Add New {activeTab === 'tm' ? 'Translation' : 'Term'}
         </h3>
-        
-        {activeTab === 'tm' ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input
-              type="text"
-              placeholder="Source text"
-              value={newTM.sourceSegment}
-              onChange={(e) => setNewTM({ ...newTM, sourceSegment: e.target.value })}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-            <input
-              type="text"
-              placeholder="Translation"
-              value={newTM.targetSegment}
-              onChange={(e) => setNewTM({ ...newTM, targetSegment: e.target.value })}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-            <div className="flex gap-2">
-              <select
-                value={newTM.langPair}
-                onChange={(e) => setNewTM({ ...newTM, langPair: e.target.value })}
+
+        {
+          activeTab === 'tm' ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input
+                type="text"
+                placeholder="Source text"
+                value={newTM.sourceSegment}
+                onChange={(e) => setNewTM({ ...newTM, sourceSegment: e.target.value })}
                 className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="en-fr">EN → FR</option>
-                <option value="fr-en">FR → EN</option>
-                <option value="ar-en">AR → EN</option>
-                <option value="en-ar">EN → AR</option>
-              </select>
-              <button
-                onClick={addTMEntry}
-                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input
-              type="text"
-              placeholder="Source term"
-              value={newGlossary.source}
-              onChange={(e) => setNewGlossary({ ...newGlossary, source: e.target.value })}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-            <input
-              type="text"
-              placeholder="Target term"
-              value={newGlossary.target}
-              onChange={(e) => setNewGlossary({ ...newGlossary, target: e.target.value })}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-            <div className="flex gap-2">
-              <select
-                value={newGlossary.langPair}
-                onChange={(e) => setNewGlossary({ ...newGlossary, langPair: e.target.value })}
+              />
+              <input
+                type="text"
+                placeholder="Translation"
+                value={newTM.targetSegment}
+                onChange={(e) => setNewTM({ ...newTM, targetSegment: e.target.value })}
                 className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="en-fr">EN → FR</option>
-                <option value="fr-en">FR → EN</option>
-                <option value="ar-en">AR → EN</option>
-                <option value="en-ar">EN → AR</option>
-              </select>
-              <button
-                onClick={addGlossaryTerm}
-                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                Add
-              </button>
+              />
+              <div className="flex gap-2">
+                <select
+                  value={newTM.langPair}
+                  onChange={(e) => setNewTM({ ...newTM, langPair: e.target.value })}
+                  className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="en-fr">EN → FR</option>
+                  <option value="fr-en">FR → EN</option>
+                  <option value="ar-en">AR → EN</option>
+                  <option value="en-ar">EN → AR</option>
+                </select>
+                <button
+                  onClick={addTMEntry}
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Add
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input
+                type="text"
+                placeholder="Source term"
+                value={newGlossary.source}
+                onChange={(e) => setNewGlossary({ ...newGlossary, source: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+              <input
+                type="text"
+                placeholder="Target term"
+                value={newGlossary.target}
+                onChange={(e) => setNewGlossary({ ...newGlossary, target: e.target.value })}
+                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+              <div className="flex gap-2">
+                <select
+                  value={newGlossary.langPair}
+                  onChange={(e) => setNewGlossary({ ...newGlossary, langPair: e.target.value })}
+                  className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="en-fr">EN → FR</option>
+                  <option value="fr-en">FR → EN</option>
+                  <option value="ar-en">AR → EN</option>
+                  <option value="en-ar">EN → AR</option>
+                </select>
+                <button
+                  onClick={addGlossaryTerm}
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          )
+        }
       </div>
 
       {/* List */}
       <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-slate-500">Loading...</div>
-        ) : activeTab === 'tm' ? (
-          <div className="divide-y divide-slate-200">
-            {filteredTM.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">
-                No translation memory entries yet. Add your first one above!
-              </div>
-            ) : (
-              filteredTM.map((tm) => (
-                <div key={tm.id} className="p-4 hover:bg-slate-50 transition-colors">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1 space-y-2">
-                      <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase">{tm.langPair}</span>
-                        <div className="text-slate-900 font-medium">{tm.sourceSegment}</div>
-                      </div>
-                      <div className="text-slate-600 bg-slate-50 px-3 py-2 rounded">
-                        {tm.targetSegment}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => deleteEntry(tm.id, 'tm')}
-                      className="text-rose-500 hover:text-rose-700 p-2"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+        {
+          loading ? (
+            <div className="p-8 text-center text-slate-500">Loading...</div>
+          ) : activeTab === 'tm' ? (
+            <div className="divide-y divide-slate-200">
+              {filteredTM.length === 0 ? (
+                <div className="p-8 text-center text-slate-500">
+                  No translation memory entries yet. Add your first one above!
                 </div>
-              ))
-            )}
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-200">
-            {filteredGlossary.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">
-                No glossary terms yet. Add your first one above!
-              </div>
-            ) : (
-              filteredGlossary.map((term) => (
-                <div key={term.id} className="p-4 hover:bg-slate-50 transition-colors">
-                  <div className="flex justify-between items-center">
-                    <div className="flex-1">
-                      <span className="text-xs font-medium text-slate-500 uppercase mr-3">{term.langPair}</span>
-                      <span className="text-slate-900 font-medium">{term.source}</span>
-                      <span className="text-slate-400 mx-3">→</span>
-                      <span className="text-primary-600 font-medium">{term.target}</span>
+              ) : (
+                filteredTM.map((tm) => (
+                  <div key={tm.id} className="p-4 hover:bg-slate-50 transition-colors">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <span className="text-xs font-medium text-slate-500 uppercase mr-3">{tm.langPair}</span>
+                        <span className="text-slate-900 font-medium">{tm.sourceSegment}</span>
+                        <span className="text-slate-400 mx-3">→</span>
+                        <span className="text-primary-600 font-medium">{tm.targetSegment}</span>
+                      </div>
+                      <button
+                        onClick={() => deleteEntry(tm.id, 'tm')}
+                        className="text-rose-500 hover:text-rose-700 p-2"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => deleteEntry(term.id, 'glossary')}
-                      className="text-rose-500 hover:text-rose-700 p-2"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-200">
+              {filteredGlossary.length === 0 ? (
+                <div className="p-8 text-center text-slate-500">
+                  No glossary terms yet. Add your first one above!
                 </div>
-              ))
-            )}
-          </div>
-        )}
+              ) : (
+                filteredGlossary.map((term) => (
+                  <div key={term.id} className="p-4 hover:bg-slate-50 transition-colors">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <span className="text-xs font-medium text-slate-500 uppercase mr-3">{term.langPair}</span>
+                        <span className="text-slate-900 font-medium">{term.source}</span>
+                        <span className="text-slate-400 mx-3">→</span>
+                        <span className="text-primary-600 font-medium">{term.target}</span>
+                      </div>
+                      <button
+                        onClick={() => deleteEntry(term.id, 'glossary')}
+                        className="text-rose-500 hover:text-rose-700 p-2"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
       </div>
 
       {/* Stats */}

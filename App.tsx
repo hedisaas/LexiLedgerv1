@@ -13,8 +13,9 @@ import QuoteManager from './components/QuoteManager';
 import ClientPortal from './components/ClientPortal';
 import TranslationMemory from './components/TranslationMemory';
 import Logo from './components/Logo';
-import BusinessProfileReminder from './components/BusinessProfileReminder';
+import LandingPage from './components/LandingPage';
 import { translations, Lang } from './locales';
+import { ProfileCompletionModal } from './components/ProfileCompletionModal';
 import { useAuth, useUserRole } from './hooks/useAuth';
 import { useTranslationJobs, useExpenses, useQuotes, useBusinessProfile } from './hooks/useSupabaseData';
 
@@ -23,8 +24,8 @@ const NavItem = ({ icon: Icon, label, active, onClick }: any) => (
   <button
     onClick={onClick}
     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1
-      ${active 
-        ? 'bg-primary-50 text-primary-700' 
+      ${active
+        ? 'bg-primary-50 text-primary-700'
         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
   >
     <Icon className={`w-5 h-5 ${active ? 'text-primary-600' : 'text-slate-400'}`} />
@@ -36,12 +37,12 @@ const App: React.FC = () => {
   // --- Auth ---
   const { user, loading: authLoading, signOut } = useAuth();
   const { role: userRole, loading: roleLoading } = useUserRole(user);
-  
+
   // --- Client Portal State (for non-authenticated client access) ---
   const [clientPortalUser, setClientPortalUser] = useState<string | null>(() => {
     return localStorage.getItem('lexiledger_client') || null;
   });
-  
+
   // --- Language State ---
   const [lang, setLang] = useState<Lang>(() => {
     return (localStorage.getItem('lexiledger_lang') as Lang) || 'en';
@@ -51,66 +52,43 @@ const App: React.FC = () => {
 
   // --- App State ---
   const [activeTab, setActiveTab] = useState<'dashboard' | 'translations' | 'clients' | 'quotes' | 'expenses' | 'resources' | 'settings'>('dashboard');
-  
+  const [showLogin, setShowLogin] = useState(false);
+
   // --- Supabase Data Hooks ---
-  const { 
-    jobs, 
-    loading: jobsLoading, 
-    addJob, 
-    updateJob, 
-    deleteJob 
+  const {
+    jobs,
+    loading: jobsLoading,
+    addJob,
+    updateJob,
+    deleteJob
   } = useTranslationJobs(user);
-  
-  const { 
-    expenses, 
-    loading: expensesLoading, 
-    addExpense, 
-    deleteExpense 
+
+  const {
+    expenses,
+    loading: expensesLoading,
+    addExpense,
+    deleteExpense
   } = useExpenses(user);
-  
-  const { 
-    quotes, 
-    loading: quotesLoading, 
-    addQuote, 
-    updateQuote, 
-    deleteQuote 
+
+  const {
+    quotes,
+    loading: quotesLoading,
+    addQuote,
+    updateQuote,
+    deleteQuote
   } = useQuotes(user);
-  
-  const { 
-    profile: businessProfile, 
-    loading: profileLoading, 
-    saveProfile 
+
+  const {
+    profile: businessProfile,
+    loading: profileLoading,
+    saveProfile
   } = useBusinessProfile(user);
-  
+
   // Invoice Modal State (Shared for Jobs and Quotes)
-  const [printDoc, setPrintDoc] = useState<{data: TranslationJob | Quote, type: 'invoice' | 'quote'} | null>(null);
-  
-  // Business Profile Reminder State
-  const [showProfileReminder, setShowProfileReminder] = useState(false);
-  
+  const [printDoc, setPrintDoc] = useState<{ data: TranslationJob | Quote, type: 'invoice' | 'quote' } | null>(null);
+
   // Sync State
   const isSyncing = jobsLoading || expensesLoading || quotesLoading || profileLoading;
-
-  // Show profile reminder after data loads if profile is incomplete
-  useEffect(() => {
-    if (user && !profileLoading && businessProfile) {
-      const dismissed = localStorage.getItem('profile_reminder_dismissed');
-      if (dismissed !== 'true') {
-        const isIncomplete = !businessProfile.businessName || 
-          !businessProfile.translatorName || 
-          !businessProfile.address || 
-          !businessProfile.taxId || 
-          !businessProfile.phone || 
-          !businessProfile.email;
-        
-        if (isIncomplete) {
-          // Show reminder after a short delay
-          const timer = setTimeout(() => setShowProfileReminder(true), 2000);
-          return () => clearTimeout(timer);
-        }
-      }
-    }
-  }, [user, profileLoading, businessProfile]);
 
   // --- Persistence ---
   useEffect(() => {
@@ -131,8 +109,9 @@ const App: React.FC = () => {
       setClientPortalUser(clientName);
     }
   };
-  
+
   const handleLogout = async () => {
+    sessionStorage.removeItem('profile_reminder_seen');
     if (user) {
       await signOut();
     } else if (clientPortalUser) {
@@ -147,11 +126,11 @@ const App: React.FC = () => {
   const handleAddJob = async (job: Omit<TranslationJob, 'id'>) => {
     await addJob(job);
   };
-  
+
   const handleUpdateJob = async (updatedJob: TranslationJob) => {
     await updateJob(updatedJob);
   };
-  
+
   const handleDeleteJob = async (id: string) => {
     await deleteJob(id);
   };
@@ -159,7 +138,7 @@ const App: React.FC = () => {
   const handleAddExpense = async (exp: Omit<Expense, 'id'>) => {
     await addExpense(exp);
   };
-  
+
   const handleDeleteExpense = async (id: string) => {
     await deleteExpense(id);
   };
@@ -168,15 +147,15 @@ const App: React.FC = () => {
   const handleAddQuote = async (q: Omit<Quote, 'id'>) => {
     await addQuote(q);
   };
-  
+
   const handleUpdateQuote = async (q: Quote) => {
     await updateQuote(q);
   };
-  
+
   const handleDeleteQuote = async (id: string) => {
     await deleteQuote(id);
   };
-  
+
   const handleConvertToJob = async (q: Quote) => {
     const newJob: Omit<TranslationJob, 'id'> = {
       date: new Date().toISOString().split('T')[0],
@@ -208,56 +187,63 @@ const App: React.FC = () => {
     );
   }
 
-  // --- RENDER: Login ---
+  // --- RENDER: Login / Landing Page ---
   if (!user && !clientPortalUser) {
+    if (!showLogin) {
+      return <LandingPage onGetStarted={() => setShowLogin(true)} />;
+    }
+
     return (
       <>
-         <div className="absolute top-4 right-4 z-50">
-           <button onClick={toggleLang} className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-slate-200 text-sm font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50">
-             <Globe className="w-4 h-4" /> {lang.toUpperCase()}
-           </button>
-         </div>
-         <Login onLogin={handleLogin} lang={lang} />
+        <div className="absolute top-4 right-4 z-50 flex gap-2">
+          <button onClick={() => setShowLogin(false)} className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50">
+            Back
+          </button>
+          <button onClick={toggleLang} className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-slate-200 text-sm font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50">
+            <Globe className="w-4 h-4" /> {lang.toUpperCase()}
+          </button>
+        </div>
+        <Login onLogin={handleLogin} lang={lang} />
       </>
     );
   }
 
   // --- RENDER: Client Portal ---
   if (clientPortalUser) {
-     return (
-        <>
-          <ClientPortal 
-             clientName={clientPortalUser}
-             jobs={jobs}
-             profile={businessProfile || undefined}
-             onLogout={handleLogout}
-             onPrintInvoice={(job) => setPrintDoc({data: job, type: 'invoice'})}
-             lang={lang}
-             setLang={setLang}
+    return (
+      <>
+        <ClientPortal
+          clientName={clientPortalUser}
+          jobs={jobs}
+          profile={businessProfile || undefined}
+          onLogout={handleLogout}
+          onPrintInvoice={(job) => setPrintDoc({ data: job, type: 'invoice' })}
+          lang={lang}
+          setLang={setLang}
+        />
+        {businessProfile && (
+          <InvoiceView
+            data={printDoc?.data || null}
+            type={printDoc?.type || 'invoice'}
+            profile={businessProfile}
+            onClose={() => setPrintDoc(null)}
           />
-          {businessProfile && (
-            <InvoiceView 
-              data={printDoc?.data || null} 
-              type={printDoc?.type || 'invoice'} 
-              profile={businessProfile} 
-              onClose={() => setPrintDoc(null)} 
-            />
-          )}
-        </>
-     );
+        )}
+      </>
+    );
   }
 
   // --- RENDER: App Interface (Admin/Secretary) ---
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans text-slate-900">
-      
+
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
-        <div className="p-6 border-b border-slate-100">
+        <div className="p-6 border-b border-slate-100 flex flex-col items-center text-center">
           <Logo size="medium" />
           <p className="text-xs text-slate-400 mt-2">{t.subtitle}</p>
         </div>
-        
+
         <nav className="flex-1 p-4">
           <NavItem icon={LayoutDashboard} label={t.dashboard} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={FileText} label={t.translations} active={activeTab === 'translations'} onClick={() => setActiveTab('translations')} />
@@ -272,17 +258,17 @@ const App: React.FC = () => {
         </nav>
 
         <div className="p-4 border-t border-slate-100 space-y-3">
-           <div className="px-2 pb-2 text-xs text-slate-400 flex items-center gap-1">
-              <Shield className="w-3 h-3" /> Logged as: <span className="font-bold capitalize text-slate-600">{userRole}</span>
-           </div>
-           <div className="flex gap-2">
-             <button onClick={toggleLang} className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-bold transition-colors">
-               <Globe className="w-3 h-3" /> {lang === 'en' ? 'English' : 'Français'}
-             </button>
-             <button onClick={handleLogout} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors" title="Logout">
-               <LogOut className="w-4 h-4" />
-             </button>
-           </div>
+          <div className="px-2 pb-2 text-xs text-slate-400 flex items-center gap-1">
+            <Shield className="w-3 h-3" /> Logged as: <span className="font-bold capitalize text-slate-600">{userRole}</span>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={toggleLang} className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-bold transition-colors">
+              <Globe className="w-3 h-3" /> {lang === 'en' ? 'English' : 'Français'}
+            </button>
+            <button onClick={handleLogout} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors" title="Logout">
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -304,21 +290,21 @@ const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden flex flex-col relative">
-        
+
         {/* Header with Cloud Sync Status */}
         <div className="h-16 bg-white border-b border-slate-200 flex items-center px-4 justify-between md:justify-end shrink-0">
           <div className="md:hidden">
             <Logo size="small" />
           </div>
           <div className="flex items-center gap-4">
-             <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full text-xs font-medium border border-slate-100">
-                <Cloud className={`w-3 h-3 ${isSyncing ? 'text-amber-500 animate-pulse' : 'text-emerald-500'}`} />
-                <span className="text-slate-500">{isSyncing ? t.syncing : t.synced}</span>
-             </div>
-             <div className="md:hidden flex gap-2">
-               <button onClick={toggleLang} className="text-xs font-bold bg-slate-100 p-2 rounded">{lang.toUpperCase()}</button>
-               <button onClick={handleLogout} className="text-rose-500 p-2"><LogOut className="w-5 h-5" /></button>
-             </div>
+            <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full text-xs font-medium border border-slate-100">
+              <Cloud className={`w-3 h-3 ${isSyncing ? 'text-amber-500 animate-pulse' : 'text-emerald-500'}`} />
+              <span className="text-slate-500">{isSyncing ? t.syncing : t.synced}</span>
+            </div>
+            <div className="md:hidden flex gap-2">
+              <button onClick={toggleLang} className="text-xs font-bold bg-slate-100 p-2 rounded">{lang.toUpperCase()}</button>
+              <button onClick={handleLogout} className="text-rose-500 p-2"><LogOut className="w-5 h-5" /></button>
+            </div>
           </div>
         </div>
 
@@ -327,12 +313,12 @@ const App: React.FC = () => {
             <Dashboard jobs={jobs} expenses={expenses} lang={lang} userRole={userRole} />
           )}
           {activeTab === 'translations' && (
-            <TranslationManager 
-              jobs={jobs} 
-              onAddJob={handleAddJob} 
-              onUpdateJob={handleUpdateJob} 
+            <TranslationManager
+              jobs={jobs}
+              onAddJob={handleAddJob}
+              onUpdateJob={handleUpdateJob}
               onDeleteJob={handleDeleteJob}
-              onPrintInvoice={(job) => setPrintDoc({ data: job, type: 'invoice'})}
+              onPrintInvoice={(job) => setPrintDoc({ data: job, type: 'invoice' })}
               lang={lang}
             />
           )}
@@ -340,7 +326,7 @@ const App: React.FC = () => {
             <ClientManager jobs={jobs} lang={lang} />
           )}
           {activeTab === 'quotes' && (
-            <QuoteManager 
+            <QuoteManager
               quotes={quotes}
               onAddQuote={handleAddQuote}
               onUpdateQuote={handleUpdateQuote}
@@ -354,47 +340,41 @@ const App: React.FC = () => {
             <TranslationMemory lang={lang} />
           )}
           {activeTab === 'expenses' && userRole === 'admin' && (
-             <ExpenseManager 
-               expenses={expenses}
-               onAddExpense={handleAddExpense}
-               onDeleteExpense={handleDeleteExpense}
-               lang={lang}
-             />
+            <ExpenseManager
+              expenses={expenses}
+              onAddExpense={handleAddExpense}
+              onDeleteExpense={handleDeleteExpense}
+              lang={lang}
+            />
           )}
           {activeTab === 'settings' && businessProfile && (
-             <Settings 
-               profile={businessProfile}
-               onSave={saveProfile}
-               jobs={jobs}
-               expenses={expenses}
-               lang={lang}
-               userRole={userRole || 'admin'}
-             />
+            <Settings
+              profile={businessProfile}
+              onSave={saveProfile}
+              jobs={jobs}
+              expenses={expenses}
+              lang={lang}
+              userRole={userRole || 'admin'}
+            />
           )}
         </div>
       </main>
 
       {/* Overlays */}
       {businessProfile && (
-        <InvoiceView 
-          data={printDoc?.data || null} 
-          type={printDoc?.type || 'invoice'} 
-          profile={businessProfile} 
-          onClose={() => setPrintDoc(null)} 
+        <InvoiceView
+          data={printDoc?.data || null}
+          type={printDoc?.type || 'invoice'}
+          profile={businessProfile}
+          onClose={() => setPrintDoc(null)}
         />
       )}
 
-      {/* Business Profile Reminder */}
-      {showProfileReminder && (
-        <BusinessProfileReminder
-          profile={businessProfile}
-          onClose={() => setShowProfileReminder(false)}
-          onGoToSettings={() => {
-            setActiveMenu('settings');
-            setShowProfileReminder(false);
-          }}
-        />
-      )}
+      {/* Global Modals */}
+      <ProfileCompletionModal
+        profile={businessProfile}
+        onNavigateToSettings={() => setActiveTab('settings')}
+      />
 
     </div>
   );
