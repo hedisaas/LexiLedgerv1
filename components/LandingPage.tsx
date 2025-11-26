@@ -170,84 +170,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                 </div>
             </div>
 
-            {/* Static Dashboard Mockup */}
-            <div className="p-6 bg-slate-50">
-                {/* Filter Bar */}
-                <div className="flex justify-between items-center mb-6 bg-white p-3 rounded-xl border border-slate-200">
-                    <div className="px-4 py-2 font-bold text-slate-700 flex items-center gap-2 text-sm">
-                        <Activity className="w-4 h-4 text-teal-600" />
-                        {text.overview || 'Overview'}
-                    </div>
-                    <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
-                        {['7d', '30d', '90d', 'All'].map((r, i) => (
-                            <div key={r} className={`px-3 py-1 rounded-md text-xs font-bold ${i === 1 ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
-                                {r}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                    {[
-                        { label: text.revenue || 'Revenue', value: '1460.000 TND', icon: TrendingUp, color: 'emerald' },
-                        { label: text.totalExpenses || 'Expenses', value: '925.000 TND', icon: TrendingDown, color: 'rose' },
-                        { label: text.netProfit || 'Net Profit', value: '535.000 TND', icon: DollarSign, color: 'blue' },
-                        { label: text.pending || 'Pending', value: '600.000 TND', icon: Clock, color: 'amber' }
-                    ].map((stat, i) => (
-                        <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                            <p className="text-xs font-medium text-slate-500 mb-1">{stat.label}</p>
-                            <h3 className="text-lg font-bold text-slate-900">{stat.value}</h3>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Chart and Actions */}
-                <div className="grid grid-cols-3 gap-6">
-                    {/* Static Chart */}
-                    <div className="col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                        <h3 className="text-base font-bold text-slate-800 mb-4">{text.financialTrends || 'Financial Trends'}</h3>
-                        <div className="h-64 flex items-end justify-between gap-1 px-4">
-                            {[
-                                { h: 15, color: 'bg-sky-500' },
-                                { h: 25, color: 'bg-sky-500' },
-                                { h: 20, color: 'bg-sky-500' },
-                                { h: 60, color: 'bg-sky-500' },
-                                { h: 35, color: 'bg-sky-500' },
-                                { h: 45, color: 'bg-sky-500' },
-                                { h: 30, color: 'bg-sky-500' },
-                                { h: 70, color: 'bg-sky-500' },
-                                { h: 40, color: 'bg-sky-500' },
-                                { h: 50, color: 'bg-sky-500' },
-                                { h: 55, color: 'bg-sky-500' },
-                                { h: 45, color: 'bg-sky-500' },
-                                { h: 35, color: 'bg-sky-500' },
-                                { h: 80, color: 'bg-sky-500' }
-                            ].map((bar, i) => (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                                    <div className={`w-full ${bar.color} rounded-t opacity-80`} style={{ height: `${bar.h}%` }} />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Priority Actions */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                        <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <Filter className="w-4 h-4 text-slate-500" /> {text.priorityActions || 'Priority Actions'}
-                        </h3>
-                        <div className="space-y-3">
-                            <div className="p-3 rounded-xl border-l-4 border-amber-400 bg-amber-50">
-                                <div className="font-bold text-slate-800 text-xs mb-1">Cabinet Maître Hedi</div>
-                                <div className="text-[10px] text-slate-600">Court Judgment</div>
-                                <div className="text-[10px] text-amber-600 mt-1">1 JOURS RESTANTS</div>
-                            </div>
-                            <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-100">
-                                <div className="text-[10px] text-indigo-600 font-bold mb-1">RECOUVREMENT</div>
-                                <div className="text-xs text-indigo-900"><span className="font-bold">600.000 TND</span> en attente</div>
-                            </div>
-                        </div>
-                    </div>
+            {/* Real Dashboard Component - Fixed Size Container */}
+            <div className="p-4 bg-slate-50 overflow-hidden" style={{ width: '1200px', height: '600px' }}>
+                <div className="w-full h-full">
+                    <Dashboard
+                        jobs={mockJobs}
+                        expenses={mockExpenses}
+                        lang={lang}
+                        userRole="admin"
+                        disableAnimations={true}
+                    />
                 </div>
             </div>
         </div>
