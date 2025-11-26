@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, FileText, PieChart, LogOut, Globe, Settings as SettingsIcon, Users, FileSignature, Cloud, Shield, Loader2, Database } from 'lucide-react';
-import { TranslationJob, Expense, Language, TranslationStatus, ExpenseCategory, BusinessProfile, Quote, QuoteStatus } from './types';
+import { TranslationJob, Expense, Language, TranslationStatus, ExpenseCategory, BusinessProfile, Quote, QuoteStatus, Secretary } from './types';
 import Dashboard from './components/Dashboard';
 import TranslationManager from './components/TranslationManager';
 import ExpenseManager from './components/ExpenseManager';
@@ -43,6 +43,12 @@ const App: React.FC = () => {
     return localStorage.getItem('lexiledger_client') || null;
   });
 
+  // --- Secretary State ---
+  const [secretary, setSecretary] = useState<Secretary | null>(() => {
+    const stored = localStorage.getItem('lexiledger_secretary');
+    return stored ? JSON.parse(stored) : null;
+  });
+
   // --- Language State ---
   const [lang, setLang] = useState<Lang>(() => {
     return (localStorage.getItem('lexiledger_lang') as Lang) || 'en';
@@ -61,14 +67,14 @@ const App: React.FC = () => {
     addJob,
     updateJob,
     deleteJob
-  } = useTranslationJobs(user);
+  } = useTranslationJobs(user, secretary);
 
   const {
     expenses,
     loading: expensesLoading,
     addExpense,
     deleteExpense
-  } = useExpenses(user);
+  } = useExpenses(user, secretary);
 
   const {
     quotes,
@@ -76,13 +82,13 @@ const App: React.FC = () => {
     addQuote,
     updateQuote,
     deleteQuote
-  } = useQuotes(user);
+  } = useQuotes(user, secretary);
 
   const {
     profile: businessProfile,
     loading: profileLoading,
     saveProfile
-  } = useBusinessProfile(user);
+  } = useBusinessProfile(user, secretary);
 
   // Invoice Modal State (Shared for Jobs and Quotes)
   const [printDoc, setPrintDoc] = useState<{ data: TranslationJob | Quote, type: 'invoice' | 'quote' } | null>(null);
@@ -100,13 +106,24 @@ const App: React.FC = () => {
   }, [clientPortalUser]);
 
   useEffect(() => {
+    if (secretary) {
+      localStorage.setItem('lexiledger_secretary', JSON.stringify(secretary));
+    } else {
+      localStorage.removeItem('lexiledger_secretary');
+    }
+  }, [secretary]);
+
+  useEffect(() => {
     localStorage.setItem('lexiledger_lang', lang);
   }, [lang]);
 
   // --- Handlers ---
-  const handleLogin = (role: 'admin' | 'secretary' | 'client', clientName?: string) => {
-    if (role === 'client' && clientName) {
-      setClientPortalUser(clientName);
+  const handleLogin = (role: 'admin' | 'secretary' | 'client', data?: string) => {
+    if (role === 'client' && data) {
+      setClientPortalUser(data);
+    } else if (role === 'secretary' && data) {
+      const secretaryData: Secretary = JSON.parse(data);
+      setSecretary(secretaryData);
     }
   };
 
@@ -116,6 +133,8 @@ const App: React.FC = () => {
       await signOut();
     } else if (clientPortalUser) {
       setClientPortalUser(null);
+    } else if (secretary) {
+      setSecretary(null);
     }
   };
 
@@ -188,7 +207,7 @@ const App: React.FC = () => {
   }
 
   // --- RENDER: Login / Landing Page ---
-  if (!user && !clientPortalUser) {
+  if (!user && !clientPortalUser && !secretary) {
     if (!showLogin) {
       return <LandingPage onGetStarted={() => setShowLogin(true)} lang={lang} toggleLang={toggleLang} />;
     }
@@ -233,6 +252,10 @@ const App: React.FC = () => {
     );
   }
 
+  // Determine effective role for UI
+  const effectiveRole = secretary ? 'secretary' : userRole;
+  const secretaryPermissions = secretary?.permissions;
+
   // --- RENDER: App Interface (Admin/Secretary) ---
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans text-slate-900">
@@ -245,21 +268,30 @@ const App: React.FC = () => {
         </div>
 
         <nav className="flex-1 p-4">
-          <NavItem icon={LayoutDashboard} label={t.dashboard} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
-          <NavItem icon={FileText} label={t.translations} active={activeTab === 'translations'} onClick={() => setActiveTab('translations')} />
-          <NavItem icon={Users} label={t.clients} active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
-          <NavItem icon={FileSignature} label={t.quotes} active={activeTab === 'quotes'} onClick={() => setActiveTab('quotes')} />
+          {(!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
+            <NavItem icon={LayoutDashboard} label={t.dashboard} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+          )}
+          {(!secretaryPermissions || secretaryPermissions.canManageTranslations) && (
+            <NavItem icon={FileText} label={t.translations} active={activeTab === 'translations'} onClick={() => setActiveTab('translations')} />
+          )}
+          {(!secretaryPermissions || secretaryPermissions.canManageClients) && (
+            <NavItem icon={Users} label={t.clients} active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
+          )}
+          {(!secretaryPermissions || secretaryPermissions.canManageQuotes) && (
+            <NavItem icon={FileSignature} label={t.quotes} active={activeTab === 'quotes'} onClick={() => setActiveTab('quotes')} />
+          )}
           <NavItem icon={Database} label="Resources" active={activeTab === 'resources'} onClick={() => setActiveTab('resources')} />
-          {/* Restrict Expenses for Secretary */}
-          {userRole === 'admin' && (
+          {(!secretaryPermissions || secretaryPermissions.canManageExpenses) && effectiveRole === 'admin' && (
             <NavItem icon={PieChart} label={t.expenses} active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} />
           )}
-          <NavItem icon={SettingsIcon} label={t.settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+          {(!secretaryPermissions || secretaryPermissions.canViewSettings) && (
+            <NavItem icon={SettingsIcon} label={t.settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+          )}
         </nav>
 
         <div className="p-4 border-t border-slate-100 space-y-3">
           <div className="px-2 pb-2 text-xs text-slate-400 flex items-center gap-1">
-            <Shield className="w-3 h-3" /> Logged as: <span className="font-bold capitalize text-slate-600">{userRole}</span>
+            <Shield className="w-3 h-3" /> Logged as: <span className="font-bold capitalize text-slate-600">{secretary ? `${secretary.name} (Secretary)` : effectiveRole}</span>
           </div>
           <div className="flex gap-2">
             <button onClick={toggleLang} className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-bold transition-colors">
@@ -309,10 +341,10 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
-          {activeTab === 'dashboard' && (
-            <Dashboard jobs={jobs} expenses={expenses} lang={lang} userRole={userRole} />
+          {activeTab === 'dashboard' && (!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
+            <Dashboard jobs={jobs} expenses={expenses} lang={lang} userRole={effectiveRole} />
           )}
-          {activeTab === 'translations' && (
+          {activeTab === 'translations' && (!secretaryPermissions || secretaryPermissions.canManageTranslations) && (
             <TranslationManager
               jobs={jobs}
               onAddJob={handleAddJob}
@@ -322,10 +354,10 @@ const App: React.FC = () => {
               lang={lang}
             />
           )}
-          {activeTab === 'clients' && (
+          {activeTab === 'clients' && (!secretaryPermissions || secretaryPermissions.canManageClients) && (
             <ClientManager jobs={jobs} lang={lang} />
           )}
-          {activeTab === 'quotes' && (
+          {activeTab === 'quotes' && (!secretaryPermissions || secretaryPermissions.canManageQuotes) && (
             <QuoteManager
               quotes={quotes}
               onAddQuote={handleAddQuote}
@@ -339,7 +371,7 @@ const App: React.FC = () => {
           {activeTab === 'resources' && (
             <TranslationMemory lang={lang} />
           )}
-          {activeTab === 'expenses' && userRole === 'admin' && (
+          {activeTab === 'expenses' && (!secretaryPermissions || secretaryPermissions.canManageExpenses) && effectiveRole === 'admin' && (
             <ExpenseManager
               expenses={expenses}
               onAddExpense={handleAddExpense}
@@ -347,14 +379,15 @@ const App: React.FC = () => {
               lang={lang}
             />
           )}
-          {activeTab === 'settings' && businessProfile && (
+          {activeTab === 'settings' && businessProfile && (!secretaryPermissions || secretaryPermissions.canViewSettings) && (
             <Settings
               profile={businessProfile}
               onSave={saveProfile}
               jobs={jobs}
               expenses={expenses}
               lang={lang}
-              userRole={userRole || 'admin'}
+              userRole={effectiveRole || 'admin'}
+              user={user}
             />
           )}
         </div>

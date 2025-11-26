@@ -105,3 +105,21 @@ export interface TMUnit {
   langPair: string;
   timestamp: number;
 }
+
+export interface SecretaryPermissions {
+  canViewDashboard: boolean;
+  canManageTranslations: boolean;
+  canManageClients: boolean;
+  canManageQuotes: boolean;
+  canManageExpenses: boolean;
+  canViewSettings: boolean;
+}
+
+export interface Secretary {
+  id: string;
+  email: string;
+  name: string;
+  password?: string;
+  permissions: SecretaryPermissions;
+  created_at?: string;
+}

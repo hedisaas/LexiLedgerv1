@@ -1,38 +1,49 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { 
-  TranslationJob, 
-  Expense, 
-  Quote, 
+import {
+  TranslationJob,
+  Expense,
+  Quote,
   BusinessProfile,
   GlossaryTerm,
-  TMUnit 
+  TMUnit,
+  Secretary
 } from '../types';
 import { User } from '@supabase/supabase-js';
 
 // ============ Translation Jobs ============
 
-export const useTranslationJobs = (user: User | null) => {
+export const useTranslationJobs = (user: User | null, secretary: Secretary | null = null) => {
   const [jobs, setJobs] = useState<TranslationJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !secretary) {
       setJobs([]);
       setLoading(false);
       return;
     }
     fetchJobs();
-  }, [user]);
+  }, [user, secretary]);
 
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('translation_jobs')
-        .select('*')
-        .order('date', { ascending: false });
+      let data, error;
+
+      if (secretary) {
+        const result = await supabase.rpc('get_secretary_jobs', { sec_id: secretary.id });
+        data = result.data;
+        error = result.error;
+      } else {
+        const result = await supabase
+          .from('translation_jobs')
+          .select('*')
+          .order('date', { ascending: false });
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
 
@@ -67,31 +78,47 @@ export const useTranslationJobs = (user: User | null) => {
   };
 
   const addJob = async (job: Omit<TranslationJob, 'id'>) => {
-    if (!user) return;
+    if (!user && !secretary) return;
     try {
-      const { data, error } = await supabase
-        .from('translation_jobs')
-        .insert([{
-          user_id: user.id,
-          date: job.date,
-          due_date: job.dueDate,
-          client_name: job.clientName,
-          client_info: job.clientInfo,
-          document_type: job.documentType,
-          source_lang: job.sourceLang,
-          target_lang: job.targetLang,
-          page_count: job.pageCount,
-          price_total: job.priceTotal,
-          status: job.status,
-          remarks: job.remarks,
-          invoice_number: job.invoiceNumber,
-          attachments: job.attachments,
-          translated_text: job.translatedText,
-          template_id: job.templateId,
-          final_document: job.finalDocument
-        }])
-        .select()
-        .single();
+      let error;
+      if (secretary) {
+        if (!secretary.permissions.canManageTranslations) {
+          throw new Error("Permission denied");
+        }
+        const { error: rpcError } = await supabase.rpc('add_secretary_job', {
+          sec_id: secretary.id,
+          job_data: job
+        });
+        error = rpcError;
+      } else if (user) {
+        const { error: dbError } = await supabase
+          .from('translation_jobs')
+          .insert([{
+            user_id: user.id,
+            date: job.date,
+            due_date: job.dueDate,
+            client_name: job.clientName,
+            client_info: job.clientInfo,
+            document_type: job.documentType,
+            source_lang: job.sourceLang,
+            target_lang: job.targetLang,
+            page_count: job.pageCount,
+            price_total: job.priceTotal,
+            status: job.status,
+            remarks: job.remarks,
+            invoice_number: job.invoiceNumber,
+            attachments: job.attachments,
+            translated_text: job.translatedText,
+            template_id: job.templateId,
+            final_document: job.finalDocument
+          }])
+          .select()
+          .single();
+        error = dbError;
+      }
+
+      if (error) throw error;
+      await fetchJobs();
 
       if (error) throw error;
       await fetchJobs();
@@ -102,29 +129,43 @@ export const useTranslationJobs = (user: User | null) => {
   };
 
   const updateJob = async (job: TranslationJob) => {
-    if (!user) return;
+    if (!user && !secretary) return;
     try {
-      const { error } = await supabase
-        .from('translation_jobs')
-        .update({
-          date: job.date,
-          due_date: job.dueDate,
-          client_name: job.clientName,
-          client_info: job.clientInfo,
-          document_type: job.documentType,
-          source_lang: job.sourceLang,
-          target_lang: job.targetLang,
-          page_count: job.pageCount,
-          price_total: job.priceTotal,
-          status: job.status,
-          remarks: job.remarks,
-          invoice_number: job.invoiceNumber,
-          attachments: job.attachments,
-          translated_text: job.translatedText,
-          template_id: job.templateId,
-          final_document: job.finalDocument
-        })
-        .eq('id', job.id);
+      let error;
+      if (secretary) {
+        if (!secretary.permissions.canManageTranslations) {
+          throw new Error("Permission denied");
+        }
+        const { error: rpcError } = await supabase.rpc('update_secretary_job', {
+          sec_id: secretary.id,
+          job_id: job.id,
+          job_data: job
+        });
+        error = rpcError;
+      } else if (user) {
+        const { error: dbError } = await supabase
+          .from('translation_jobs')
+          .update({
+            date: job.date,
+            due_date: job.dueDate,
+            client_name: job.clientName,
+            client_info: job.clientInfo,
+            document_type: job.documentType,
+            source_lang: job.sourceLang,
+            target_lang: job.targetLang,
+            page_count: job.pageCount,
+            price_total: job.priceTotal,
+            status: job.status,
+            remarks: job.remarks,
+            invoice_number: job.invoiceNumber,
+            attachments: job.attachments,
+            translated_text: job.translatedText,
+            template_id: job.templateId,
+            final_document: job.finalDocument
+          })
+          .eq('id', job.id);
+        error = dbError;
+      }
 
       if (error) throw error;
       await fetchJobs();
@@ -135,12 +176,25 @@ export const useTranslationJobs = (user: User | null) => {
   };
 
   const deleteJob = async (id: string) => {
-    if (!user) return;
+    if (!user && !secretary) return;
     try {
-      const { error } = await supabase
-        .from('translation_jobs')
-        .delete()
-        .eq('id', id);
+      let error;
+      if (secretary) {
+        if (!secretary.permissions.canManageTranslations) {
+          throw new Error("Permission denied");
+        }
+        const { error: rpcError } = await supabase.rpc('delete_secretary_job', {
+          sec_id: secretary.id,
+          job_id: id
+        });
+        error = rpcError;
+      } else if (user) {
+        const { error: dbError } = await supabase
+          .from('translation_jobs')
+          .delete()
+          .eq('id', id);
+        error = dbError;
+      }
 
       if (error) throw error;
       await fetchJobs();
@@ -155,27 +209,37 @@ export const useTranslationJobs = (user: User | null) => {
 
 // ============ Expenses ============
 
-export const useExpenses = (user: User | null) => {
+export const useExpenses = (user: User | null, secretary: Secretary | null = null) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !secretary) {
       setExpenses([]);
       setLoading(false);
       return;
     }
     fetchExpenses();
-  }, [user]);
+  }, [user, secretary]);
 
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .order('date', { ascending: false });
+      let data, error;
+
+      if (secretary) {
+        const result = await supabase.rpc('get_secretary_expenses', { sec_id: secretary.id });
+        data = result.data;
+        error = result.error;
+      } else {
+        const result = await supabase
+          .from('expenses')
+          .select('*')
+          .order('date', { ascending: false });
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
 
@@ -198,17 +262,30 @@ export const useExpenses = (user: User | null) => {
   };
 
   const addExpense = async (expense: Omit<Expense, 'id'>) => {
-    if (!user) return;
+    if (!user && !secretary) return;
     try {
-      const { error } = await supabase
-        .from('expenses')
-        .insert([{
-          user_id: user.id,
-          date: expense.date,
-          description: expense.description,
-          amount: expense.amount,
-          category: expense.category
-        }]);
+      let error;
+      if (secretary) {
+        if (!secretary.permissions.canManageExpenses) {
+          throw new Error("Permission denied");
+        }
+        const { error: rpcError } = await supabase.rpc('add_secretary_expense', {
+          sec_id: secretary.id,
+          exp_data: expense
+        });
+        error = rpcError;
+      } else if (user) {
+        const { error: dbError } = await supabase
+          .from('expenses')
+          .insert([{
+            user_id: user.id,
+            date: expense.date,
+            description: expense.description,
+            amount: expense.amount,
+            category: expense.category
+          }]);
+        error = dbError;
+      }
 
       if (error) throw error;
       await fetchExpenses();
@@ -219,12 +296,25 @@ export const useExpenses = (user: User | null) => {
   };
 
   const deleteExpense = async (id: string) => {
-    if (!user) return;
+    if (!user && !secretary) return;
     try {
-      const { error } = await supabase
-        .from('expenses')
-        .delete()
-        .eq('id', id);
+      let error;
+      if (secretary) {
+        if (!secretary.permissions.canManageExpenses) {
+          throw new Error("Permission denied");
+        }
+        const { error: rpcError } = await supabase.rpc('delete_secretary_expense', {
+          sec_id: secretary.id,
+          exp_id: id
+        });
+        error = rpcError;
+      } else if (user) {
+        const { error: dbError } = await supabase
+          .from('expenses')
+          .delete()
+          .eq('id', id);
+        error = dbError;
+      }
 
       if (error) throw error;
       await fetchExpenses();
@@ -239,27 +329,37 @@ export const useExpenses = (user: User | null) => {
 
 // ============ Quotes ============
 
-export const useQuotes = (user: User | null) => {
+export const useQuotes = (user: User | null, secretary: Secretary | null = null) => {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !secretary) {
       setQuotes([]);
       setLoading(false);
       return;
     }
     fetchQuotes();
-  }, [user]);
+  }, [user, secretary]);
 
   const fetchQuotes = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('quotes')
-        .select('*')
-        .order('date', { ascending: false });
+      let data, error;
+
+      if (secretary) {
+        const result = await supabase.rpc('get_secretary_quotes', { sec_id: secretary.id });
+        data = result.data;
+        error = result.error;
+      } else {
+        const result = await supabase
+          .from('quotes')
+          .select('*')
+          .order('date', { ascending: false });
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
 
@@ -289,24 +389,37 @@ export const useQuotes = (user: User | null) => {
   };
 
   const addQuote = async (quote: Omit<Quote, 'id'>) => {
-    if (!user) return;
+    if (!user && !secretary) return;
     try {
-      const { error } = await supabase
-        .from('quotes')
-        .insert([{
-          user_id: user.id,
-          date: quote.date,
-          valid_until: quote.validUntil,
-          client_name: quote.clientName,
-          client_info: quote.clientInfo,
-          document_type: quote.documentType,
-          source_lang: quote.sourceLang,
-          target_lang: quote.targetLang,
-          page_count: quote.pageCount,
-          price_total: quote.priceTotal,
-          status: quote.status,
-          remarks: quote.remarks
-        }]);
+      let error;
+      if (secretary) {
+        if (!secretary.permissions.canManageQuotes) {
+          throw new Error("Permission denied");
+        }
+        const { error: rpcError } = await supabase.rpc('add_secretary_quote', {
+          sec_id: secretary.id,
+          quote_data: quote
+        });
+        error = rpcError;
+      } else if (user) {
+        const { error: dbError } = await supabase
+          .from('quotes')
+          .insert([{
+            user_id: user.id,
+            date: quote.date,
+            valid_until: quote.validUntil,
+            client_name: quote.clientName,
+            client_info: quote.clientInfo,
+            document_type: quote.documentType,
+            source_lang: quote.sourceLang,
+            target_lang: quote.targetLang,
+            page_count: quote.pageCount,
+            price_total: quote.priceTotal,
+            status: quote.status,
+            remarks: quote.remarks
+          }]);
+        error = dbError;
+      }
 
       if (error) throw error;
       await fetchQuotes();
@@ -317,24 +430,38 @@ export const useQuotes = (user: User | null) => {
   };
 
   const updateQuote = async (quote: Quote) => {
-    if (!user) return;
+    if (!user && !secretary) return;
     try {
-      const { error } = await supabase
-        .from('quotes')
-        .update({
-          date: quote.date,
-          valid_until: quote.validUntil,
-          client_name: quote.clientName,
-          client_info: quote.clientInfo,
-          document_type: quote.documentType,
-          source_lang: quote.sourceLang,
-          target_lang: quote.targetLang,
-          page_count: quote.pageCount,
-          price_total: quote.priceTotal,
-          status: quote.status,
-          remarks: quote.remarks
-        })
-        .eq('id', quote.id);
+      let error;
+      if (secretary) {
+        if (!secretary.permissions.canManageQuotes) {
+          throw new Error("Permission denied");
+        }
+        const { error: rpcError } = await supabase.rpc('update_secretary_quote', {
+          sec_id: secretary.id,
+          quote_id: quote.id,
+          quote_data: quote
+        });
+        error = rpcError;
+      } else if (user) {
+        const { error: dbError } = await supabase
+          .from('quotes')
+          .update({
+            date: quote.date,
+            valid_until: quote.validUntil,
+            client_name: quote.clientName,
+            client_info: quote.clientInfo,
+            document_type: quote.documentType,
+            source_lang: quote.sourceLang,
+            target_lang: quote.targetLang,
+            page_count: quote.pageCount,
+            price_total: quote.priceTotal,
+            status: quote.status,
+            remarks: quote.remarks
+          })
+          .eq('id', quote.id);
+        error = dbError;
+      }
 
       if (error) throw error;
       await fetchQuotes();
@@ -345,12 +472,25 @@ export const useQuotes = (user: User | null) => {
   };
 
   const deleteQuote = async (id: string) => {
-    if (!user) return;
+    if (!user && !secretary) return;
     try {
-      const { error } = await supabase
-        .from('quotes')
-        .delete()
-        .eq('id', id);
+      let error;
+      if (secretary) {
+        if (!secretary.permissions.canManageQuotes) {
+          throw new Error("Permission denied");
+        }
+        const { error: rpcError } = await supabase.rpc('delete_secretary_quote', {
+          sec_id: secretary.id,
+          quote_id: id
+        });
+        error = rpcError;
+      } else if (user) {
+        const { error: dbError } = await supabase
+          .from('quotes')
+          .delete()
+          .eq('id', id);
+        error = dbError;
+      }
 
       if (error) throw error;
       await fetchQuotes();
@@ -365,29 +505,39 @@ export const useQuotes = (user: User | null) => {
 
 // ============ Business Profile ============
 
-export const useBusinessProfile = (user: User | null) => {
+export const useBusinessProfile = (user: User | null, secretary: Secretary | null = null) => {
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !secretary) {
       setProfile(null);
       setLoading(false);
       return;
     }
     fetchProfile();
-  }, [user]);
+  }, [user, secretary]);
 
   const fetchProfile = async () => {
-    if (!user) return;
+    if (!user && !secretary) return;
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('business_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .limit(1);
+      let data, error;
+
+      if (secretary) {
+        const result = await supabase.rpc('get_secretary_profile', { sec_id: secretary.id });
+        data = result.data;
+        error = result.error;
+      } else if (user) {
+        const result = await supabase
+          .from('business_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .limit(1);
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
 

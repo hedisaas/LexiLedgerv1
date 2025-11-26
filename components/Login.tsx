@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Lock, User, ArrowRight, ShieldCheck, Briefcase, UserCog, Loader2 } from 'lucide-react';
 import { Lang, translations } from '../locales';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 import Logo from './Logo';
 
 interface LoginProps {
@@ -21,7 +22,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
   const [accessCode, setAccessCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { signIn, signUp } = useAuth();
   const t = translations[lang];
 
@@ -29,7 +30,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     if (mode === 'staff') {
       try {
         if (isSignUp) {
@@ -38,7 +39,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
             translator_name: translatorName,
             role: selectedRole
           });
-          
+
           if (error) {
             setError(error.message);
           } else {
@@ -47,13 +48,32 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
           }
         } else {
           // Sign in existing user
-          const { data, error } = await signIn(email, password);
-          
-          if (error) {
-            setError(error.message);
-          } else if (data.user) {
-            // The useAuth hook will handle setting the user state
-            // The role will be determined in App.tsx
+          if (selectedRole === 'admin') {
+            const { data, error } = await signIn(email, password);
+            if (error) throw error;
+          } else {
+            // Secretary Login
+            // For this implementation, we'll use a direct query to check credentials
+            // In a real app, this should be a secure RPC or Edge Function
+            // We are using a simple password check here as per the plan
+            const { data, error } = await supabase
+              .from('secretary_access')
+              .select('*')
+              .eq('email', email)
+              .single();
+
+            if (error || !data) {
+              throw new Error('Invalid email or password');
+            }
+
+            if (data.password !== password) { // Simple check
+              throw new Error('Invalid email or password');
+            }
+
+            // Successful Secretary Login
+            // We need to pass this up to App.tsx
+            onLogin('secretary', JSON.stringify(data)); // Pass full secretary object
+            return;
           }
         }
       } catch (err: any) {
@@ -67,7 +87,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
         setError("Invalid access code (Try: 1234)");
       }
     }
-    
+
     setLoading(false);
   };
 
@@ -83,15 +103,15 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
           <Logo size="medium" variant="text" className="text-white justify-center flex mb-2" />
           <p className="text-slate-400 text-sm mt-1">{t.subtitle}</p>
         </div>
-        
+
         <div className="flex border-b border-slate-100">
-          <button 
+          <button
             onClick={() => setMode('staff')}
             className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${mode === 'staff' ? 'bg-white text-slate-900 border-b-2 border-primary-600' : 'bg-slate-50 text-slate-400'}`}
           >
             <ShieldCheck className="w-4 h-4" /> Staff Login
           </button>
-          <button 
+          <button
             onClick={() => setMode('client')}
             className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${mode === 'client' ? 'bg-white text-slate-900 border-b-2 border-primary-600' : 'bg-slate-50 text-slate-400'}`}
           >
@@ -101,48 +121,54 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
 
         <div className="p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             {mode === 'staff' ? (
               <>
-                {isSignUp && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-slate-400" />
-                        </div>
-                        <input 
-                          type="text" 
-                          required
-                          className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-slate-900 placeholder-slate-400 transition-colors"
-                          placeholder="Your full name"
-                          value={translatorName}
-                          onChange={(e) => setTranslatorName(e.target.value)}
-                        />
+                {/* Role Selection for Login/Signup */}
+                <div className="flex bg-slate-100 p-1 rounded-lg mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole('admin')}
+                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${selectedRole === 'admin' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Admin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedRole('secretary'); setIsSignUp(false); }} // Secretaries can't sign up here
+                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${selectedRole === 'secretary' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Secretary
+                  </button>
+                </div>
+
+                {isSignUp && selectedRole === 'admin' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-slate-400" />
                       </div>
+                      <input
+                        type="text"
+                        required
+                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-slate-900 placeholder-slate-400 transition-colors"
+                        placeholder="Your full name"
+                        value={translatorName}
+                        onChange={(e) => setTranslatorName(e.target.value)}
+                      />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Role</label>
-                      <select
-                        value={selectedRole}
-                        onChange={(e) => setSelectedRole(e.target.value as 'admin' | 'secretary')}
-                        className="block w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-slate-900 transition-colors"
-                      >
-                        <option value="admin">Admin (Full Access)</option>
-                        <option value="secretary">Secretary (Limited Access)</option>
-                      </select>
-                    </div>
-                  </>
+                  </div>
                 )}
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <User className="h-5 w-5 text-slate-400" />
                     </div>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       required
                       className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-slate-900 placeholder-slate-400 transition-colors"
                       placeholder="your@email.com"
@@ -157,8 +183,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Lock className="h-5 w-5 text-slate-400" />
                     </div>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       required
                       className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-slate-900 placeholder-slate-400 transition-colors"
                       placeholder="•••••••••"
@@ -167,25 +193,28 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                     />
                   </div>
                 </div>
-                <div className="text-xs text-center">
-                  {isSignUp ? (
-                    <button
-                      type="button"
-                      onClick={() => setIsSignUp(false)}
-                      className="text-primary-600 hover:text-primary-700 font-medium"
-                    >
-                      Already have an account? Sign in
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsSignUp(true)}
-                      className="text-primary-600 hover:text-primary-700 font-medium"
-                    >
-                      Don't have an account? Sign up
-                    </button>
-                  )}
-                </div>
+
+                {selectedRole === 'admin' && (
+                  <div className="text-xs text-center">
+                    {isSignUp ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsSignUp(false)}
+                        className="text-primary-600 hover:text-primary-700 font-medium"
+                      >
+                        Already have an account? Sign in
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsSignUp(true)}
+                        className="text-primary-600 hover:text-primary-700 font-medium"
+                      >
+                        Don't have an account? Sign up
+                      </button>
+                    )}
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -195,8 +224,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <User className="h-5 w-5 text-slate-400" />
                     </div>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       required
                       className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-slate-900 placeholder-slate-400 transition-colors"
                       placeholder="e.g. Ahmed Ben Ali"
@@ -211,8 +240,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Lock className="h-5 w-5 text-slate-400" />
                     </div>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       required
                       className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-slate-900 placeholder-slate-400 transition-colors"
                       placeholder="1234"
@@ -230,14 +259,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
               </div>
             )}
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-all transform hover:-translate-y-0.5 shadow-lg shadow-slate-900/20 disabled:shadow-none disabled:transform-none"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> 
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   {mode === 'staff' ? (isSignUp ? 'Creating Account...' : 'Signing In...') : 'Logging In...'}
                 </>
               ) : (
