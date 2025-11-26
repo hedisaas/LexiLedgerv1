@@ -170,9 +170,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                 </div>
             </div>
 
-            {/* Real Dashboard Component - Fixed Size Container */}
-            <div className="p-4 bg-slate-50 overflow-hidden" style={{ width: '1200px', height: '600px' }}>
-                <div className="w-full h-full">
+            {/* Real Dashboard Component - Scaled Container */}
+            <div className="p-4 bg-slate-50 overflow-hidden flex justify-center items-start">
+                <div className="transform scale-75 origin-top" style={{ width: '1400px' }}>
                     <Dashboard
                         jobs={mockJobs}
                         expenses={mockExpenses}
