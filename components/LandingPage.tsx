@@ -152,10 +152,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
     // --- MOCKUP COMPONENTS ---
 
     const DashboardMockup = () => (
-        <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden w-full max-w-5xl mx-auto transform transition-transform duration-100 origin-top"
-            style={{
-                transform: `perspective(1000px) rotateX(${mousePos.y * 1}deg) rotateY(${mousePos.x * 1}deg)`
-            }}>
+        <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden w-full max-w-5xl mx-auto">
             {/* Fake Browser Header */}
             <div className="bg-slate-50 border-b border-slate-200 p-3 flex items-center gap-2">
                 <div className="flex gap-1.5">
