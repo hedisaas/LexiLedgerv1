@@ -175,7 +175,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                 <img
                     src="/dashboard-preview.png"
                     alt="LexiLedger Dashboard Preview"
-                    className="rounded-lg shadow-xl w-full max-w-6xl"
+                    className="rounded-lg shadow-xl w-full max-w-6xl hover:scale-105 transition-transform duration-500 cursor-pointer"
                 />
             </div>
         </div>
