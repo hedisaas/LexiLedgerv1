@@ -12,11 +12,12 @@ interface DashboardProps {
   expenses: Expense[];
   lang: Lang;
   userRole: 'admin' | 'secretary';
+  disableAnimations?: boolean;
 }
 
 type DateRange = '7d' | '30d' | '90d' | 'all';
 
-const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole }) => {
+const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole, disableAnimations = false }) => {
   const [dateRange, setDateRange] = useState<DateRange>('30d');
   const t = translations[lang];
 
@@ -310,6 +311,7 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole })
                     fillOpacity={1}
                     fill="url(#colorRev)"
                     name={t.revenue}
+                    isAnimationActive={!disableAnimations}
                   />
                   <Area
                     type="monotone"
@@ -319,6 +321,7 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole })
                     fillOpacity={1}
                     fill="url(#colorExp)"
                     name={t.totalExpenses}
+                    isAnimationActive={!disableAnimations}
                   />
                 </AreaChart>
               </ResponsiveContainer>

@@ -177,6 +177,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                         expenses={mockExpenses}
                         lang={lang}
                         userRole="admin"
+                        disableAnimations={true}
                     />
                 </div>
             </div>
