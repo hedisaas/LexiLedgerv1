@@ -170,17 +170,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                 </div>
             </div>
 
-            {/* Real Dashboard Component - Scaled Container */}
+            {/* Dashboard Screenshot */}
             <div className="p-4 bg-slate-50 overflow-hidden flex justify-center items-start">
-                <div className="transform scale-75 origin-top" style={{ width: '1400px' }}>
-                    <Dashboard
-                        jobs={mockJobs}
-                        expenses={mockExpenses}
-                        lang={lang}
-                        userRole="admin"
-                        disableAnimations={true}
-                    />
-                </div>
+                <img
+                    src="/dashboard-preview.png"
+                    alt="LexiLedger Dashboard Preview"
+                    className="rounded-lg shadow-xl w-full max-w-6xl"
+                />
             </div>
         </div>
     );
