@@ -14,6 +14,9 @@ import {
 } from 'lucide-react';
 import Logo from './Logo';
 import { Lang } from '../locales';
+import Dashboard from './Dashboard';
+import { TranslationJob, Expense, TranslationStatus, ExpenseCategory, Language } from '../types';
+import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, ZoomIn, ZoomOut, RotateCw, RotateCcw, Save, FileDown, Sparkles, Database, BookOpen, RefreshCw, Maximize2 } from 'lucide-react';
 
 interface LandingPageProps {
     onGetStarted: () => void;
@@ -127,12 +130,31 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
 
     const text = t[lang];
 
+    // --- MOCK DATA ---
+    const today = new Date();
+    const getPastDate = (days: number) => new Date(today.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+    const getFutureDate = (days: number) => new Date(today.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+
+    const mockJobs: TranslationJob[] = [
+        { id: '1', date: getPastDate(2), dueDate: getFutureDate(1), clientName: "TechCorp Intl", clientInfo: "Tunis", documentType: "Legal Contract", sourceLang: Language.ENGLISH, targetLang: Language.FRENCH, pageCount: 5, priceTotal: 450, status: TranslationStatus.COMPLETED, remarks: "" },
+        { id: '2', date: getPastDate(5), dueDate: getPastDate(1), clientName: "Global Trade SARL", clientInfo: "Sfax", documentType: "Commercial Registry", sourceLang: Language.FRENCH, targetLang: Language.ENGLISH, pageCount: 2, priceTotal: 120, status: TranslationStatus.PAID, remarks: "" },
+        { id: '3', date: getPastDate(10), dueDate: getFutureDate(5), clientName: "Cabinet Maître Hedi", clientInfo: "Tunis", documentType: "Court Judgment", sourceLang: Language.ARABIC, targetLang: Language.FRENCH, pageCount: 8, priceTotal: 600, status: TranslationStatus.PENDING, remarks: "" },
+        { id: '4', date: getPastDate(15), dueDate: getPastDate(12), clientName: "Individual Client", clientInfo: "Ariana", documentType: "Birth Certificate", sourceLang: Language.ARABIC, targetLang: Language.ENGLISH, pageCount: 1, priceTotal: 40, status: TranslationStatus.PAID, remarks: "" },
+        { id: '5', date: getPastDate(20), dueDate: getPastDate(18), clientName: "StartUp Hub", clientInfo: "Sousse", documentType: "Terms of Service", sourceLang: Language.ENGLISH, targetLang: Language.ARABIC, pageCount: 12, priceTotal: 850, status: TranslationStatus.COMPLETED, remarks: "" },
+    ];
+
+    const mockExpenses: Expense[] = [
+        { id: '1', date: getPastDate(3), description: "Office Rent", amount: 800, category: ExpenseCategory.FIXED_RENT },
+        { id: '2', date: getPastDate(12), description: "Internet Bill", amount: 80, category: ExpenseCategory.VARIABLE_BILLS },
+        { id: '3', date: getPastDate(25), description: "Paper Supplies", amount: 45, category: ExpenseCategory.VARIABLE_OFFICE },
+    ];
+
     // --- MOCKUP COMPONENTS ---
 
     const DashboardMockup = () => (
-        <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden w-full max-w-4xl mx-auto transform transition-transform duration-100"
+        <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden w-full max-w-5xl mx-auto transform transition-transform duration-100 origin-top"
             style={{
-                transform: `perspective(1000px) rotateX(${mousePos.y * 2}deg) rotateY(${mousePos.x * 2}deg)`
+                transform: `perspective(1000px) rotateX(${mousePos.y * 1}deg) rotateY(${mousePos.x * 1}deg)`
             }}>
             {/* Fake Browser Header */}
             <div className="bg-slate-50 border-b border-slate-200 p-3 flex items-center gap-2">
@@ -146,35 +168,80 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                 </div>
             </div>
 
-            {/* Dashboard Content */}
-            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Sidebar */}
-                <div className="hidden md:block col-span-1 space-y-4">
-                    <div className="h-8 w-32 bg-slate-100 rounded-md animate-pulse" />
-                    <div className="space-y-2">
-                        {[1, 2, 3, 4].map(i => (
-                            <div key={i} className="h-10 w-full bg-slate-50 rounded-lg border border-slate-100" />
-                        ))}
+            {/* Real Dashboard Component */}
+            <div className="p-4 bg-slate-50 h-[600px] overflow-hidden relative pointer-events-none select-none">
+                <div className="absolute inset-0 z-10"></div> {/* Overlay to prevent interaction if needed, or remove to allow interaction */}
+                <div className="scale-[0.85] origin-top w-[115%] -ml-[7.5%]">
+                    <Dashboard
+                        jobs={mockJobs}
+                        expenses={mockExpenses}
+                        lang={lang}
+                        userRole="admin"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+
+    const WorkbenchPreview = () => (
+        <div className="bg-white rounded-xl shadow-2xl border border-slate-700 overflow-hidden w-full aspect-[4/3] flex flex-col">
+            {/* Toolbar */}
+            <div className="bg-white px-4 py-2 flex justify-between items-center border-b border-slate-200 shrink-0">
+                <div className="flex items-center gap-2">
+                    <div className="flex bg-slate-50 border border-slate-200 p-1 rounded-lg gap-1">
+                        <div className="p-1 text-slate-400"><Bold className="w-3 h-3" /></div>
+                        <div className="p-1 text-slate-400"><Italic className="w-3 h-3" /></div>
+                        <div className="p-1 text-slate-400"><Underline className="w-3 h-3" /></div>
+                    </div>
+                    <div className="flex bg-slate-50 border border-slate-200 p-1 rounded-lg gap-1 ml-2">
+                        <div className="p-1 text-slate-400"><AlignLeft className="w-3 h-3" /></div>
+                        <div className="p-1 text-slate-600 bg-white shadow-sm rounded"><AlignCenter className="w-3 h-3" /></div>
+                        <div className="p-1 text-slate-400"><AlignRight className="w-3 h-3" /></div>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> AI Auto-Translate
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 flex overflow-hidden">
+                {/* Source */}
+                <div className="w-1/2 bg-slate-100 border-r border-slate-200 p-4 relative">
+                    <div className="absolute top-2 right-2 flex gap-1">
+                        <div className="p-1 bg-white rounded shadow-sm"><RotateCcw className="w-3 h-3 text-slate-400" /></div>
+                        <div className="p-1 bg-white rounded shadow-sm"><Maximize2 className="w-3 h-3 text-slate-400" /></div>
+                    </div>
+                    <div className="w-full h-full bg-white shadow-sm p-4 text-[8px] text-slate-400 overflow-hidden leading-relaxed select-none">
+                        <div className="w-20 h-4 bg-slate-200 mb-4"></div>
+                        <div className="space-y-2">
+                            <div className="w-full h-2 bg-slate-100"></div>
+                            <div className="w-full h-2 bg-slate-100"></div>
+                            <div className="w-3/4 h-2 bg-slate-100"></div>
+                            <div className="w-full h-2 bg-slate-100"></div>
+                            <div className="w-5/6 h-2 bg-slate-100"></div>
+                        </div>
+                        <div className="mt-8 space-y-2">
+                            <div className="w-full h-2 bg-slate-100"></div>
+                            <div className="w-full h-2 bg-slate-100"></div>
+                            <div className="w-4/5 h-2 bg-slate-100"></div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Main Area */}
-                <div className="col-span-1 md:col-span-2 space-y-6">
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-3 gap-4">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                                <div className="h-4 w-16 bg-slate-100 rounded mb-2" />
-                                <div className="h-8 w-24 bg-teal-50 rounded" />
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Chart Area */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm h-48 flex items-end justify-between gap-2 px-8 pb-4">
-                        {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
-                            <div key={i} className="w-full bg-teal-500 rounded-t-sm opacity-80 hover:opacity-100 transition-opacity" style={{ height: `${h}%` }} />
-                        ))}
+                {/* Target */}
+                <div className="w-1/2 bg-slate-200 p-4 flex justify-center">
+                    <div className="w-full h-full bg-white shadow-lg p-6 text-[10px] text-slate-800 font-serif leading-relaxed">
+                        <h1 className="text-center font-bold text-xs mb-4 uppercase">Official Translation</h1>
+                        <p>This is to certify that the attached document is a true and accurate translation...</p>
+                        <p className="mt-2 text-justify">
+                            <strong>Article 1:</strong> The present contract defines the terms and conditions...
+                        </p>
+                        <p className="mt-2 text-justify">
+                            <strong>Article 2:</strong> The parties agree to the following obligations...
+                        </p>
                     </div>
                 </div>
             </div>
@@ -375,21 +442,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                     <div className="relative">
                         <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-blue-500/20 blur-3xl rounded-full" />
                         <div className="relative bg-slate-800 rounded-2xl border border-slate-700 p-2 shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-500">
-                            <div className="bg-slate-900 rounded-xl overflow-hidden aspect-[4/3] relative">
-                                {/* Abstract UI Representation */}
-                                <div className="absolute top-0 left-0 w-full h-12 bg-slate-800 border-b border-slate-700 flex items-center px-4 gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                                    <div className="w-3 h-3 rounded-full bg-amber-500/50" />
-                                    <div className="w-3 h-3 rounded-full bg-emerald-500/50" />
-                                </div>
-                                <div className="p-8 space-y-6 mt-8">
-                                    <div className="flex gap-4">
-                                        <div className="w-1/3 h-32 bg-slate-800 rounded-lg animate-pulse" />
-                                        <div className="w-2/3 h-32 bg-slate-800 rounded-lg animate-pulse delay-75" />
-                                    </div>
-                                    <div className="h-40 bg-slate-800 rounded-lg animate-pulse delay-150" />
-                                </div>
-                            </div>
+                            <WorkbenchPreview />
                         </div>
                     </div>
                 </div>
