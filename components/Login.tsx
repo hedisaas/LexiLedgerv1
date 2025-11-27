@@ -52,27 +52,30 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
             const { data, error } = await signIn(email, password);
             if (error) throw error;
           } else {
-            // Secretary Login
-            // For this implementation, we'll use a direct query to check credentials
-            // In a real app, this should be a secure RPC or Edge Function
-            // We are using a simple password check here as per the plan
+            // Secretary Login using secure RPC function
+            console.log('Attempting secretary login for:', email);
             const { data, error } = await supabase
-              .from('secretary_access')
-              .select('*')
-              .eq('email', email)
-              .single();
+              .rpc('authenticate_secretary', {
+                p_email: email,
+                p_password: password
+              });
 
-            if (error || !data) {
+            console.log('Secretary authentication result:', { data, error });
+
+            if (error) {
+              console.error('Secretary authentication error:', error);
               throw new Error('Invalid email or password');
             }
 
-            if (data.password !== password) { // Simple check
+            if (!data || data.length === 0) {
+              console.log('No secretary found with these credentials');
               throw new Error('Invalid email or password');
             }
 
             // Successful Secretary Login
-            // We need to pass this up to App.tsx
-            onLogin('secretary', JSON.stringify(data)); // Pass full secretary object
+            const secretaryData = data[0]; // RPC returns array
+            console.log('Secretary login successful:', secretaryData);
+            onLogin('secretary', JSON.stringify(secretaryData));
             return;
           }
         }
