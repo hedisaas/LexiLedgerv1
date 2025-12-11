@@ -38,6 +38,8 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
       saveAs(blob, `${type === 'quote' ? 'Devis' : 'Facture'}_${data.clientName}_${data.id.slice(0, 6)}.pdf`);
 
       // Prompt for completion
+      console.log('Completing Invoice:', { type, hasCallback: !!onMarkAsCompleted, status: data.status });
+
       if (type === 'invoice' && onMarkAsCompleted && data.status !== 'Completed' && data.status !== 'Paid') {
         setTimeout(() => {
           setShowCompletionModal(true);
@@ -108,7 +110,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
 
   // QR Code Data (Dynamic URL verification)
   // User requested to force Vercel link even on localhost
-  const PRODUCTION_URL = 'https://lexiledger.vercel.app';
+  const PRODUCTION_URL = 'https://lexi-ledgerv1.vercel.app';
   const baseUrl = PRODUCTION_URL;
   // const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://lexiledger.com';
 
