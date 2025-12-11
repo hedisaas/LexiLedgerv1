@@ -53,20 +53,20 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              // Split vendor chunks
-              if (id.includes('react') || id.includes('react-dom')) {
-                return 'vendor-react';
+              // Isolate largest dependencies only
+              if (id.includes('@react-pdf')) {
+                return 'pdf-worker';
               }
               if (id.includes('@supabase')) {
-                return 'vendor-supabase';
-              }
-              if (id.includes('@react-pdf')) {
-                return 'vendor-pdf';
+                return 'supabase';
               }
               if (id.includes('lucide-react')) {
-                return 'vendor-icons';
+                return 'icons';
               }
-              return 'vendor'; // All other node_modules go here
+
+              // Keep React, ReactDOM, and others in the main vendor chunk 
+              // to avoid "reading forwardRef of undefined" errors caused by split loading
+              return 'vendor';
             }
           }
         }
