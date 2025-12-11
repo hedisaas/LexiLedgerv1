@@ -418,7 +418,7 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole, d
 
         {/* Top Clients Table (Admin Only) */}
         {userRole === 'admin' && (
-          <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div className="lg:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-800">Top Clients by Revenue</h3>
               <Users className="w-5 h-5 text-slate-400" />
