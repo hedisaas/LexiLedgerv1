@@ -255,6 +255,12 @@ const App: React.FC = () => {
             type={printDoc?.type || 'invoice'}
             profile={businessProfile}
             onClose={() => setPrintDoc(null)}
+            onMarkAsCompleted={() => {
+              if (printDoc?.data && printDoc.type === 'invoice') {
+                handleUpdateJob({ ...printDoc.data as TranslationJob, status: TranslationStatus.COMPLETED });
+              }
+            }}
+            lang={lang}
           />
         )}
       </>
@@ -415,6 +421,12 @@ const App: React.FC = () => {
           type={printDoc?.type || 'invoice'}
           profile={businessProfile}
           onClose={() => setPrintDoc(null)}
+          onMarkAsCompleted={() => {
+            if (printDoc?.data && printDoc.type === 'invoice') {
+              handleUpdateJob({ ...printDoc.data as TranslationJob, status: TranslationStatus.COMPLETED });
+            }
+          }}
+          lang={lang}
         />
       )}
 

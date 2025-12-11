@@ -20,6 +20,7 @@ const QuoteManager: React.FC<QuoteManagerProps> = ({ quotes, onAddQuote, onUpdat
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [requests, setRequests] = useState<QuoteRequest[]>([]);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Quote>>({
     date: new Date().toISOString().split('T')[0],
     validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +30 days
@@ -58,10 +59,23 @@ const QuoteManager: React.FC<QuoteManagerProps> = ({ quotes, onAddQuote, onUpdat
       priceTotal: 0
     });
     setIsFormOpen(true);
-    // Optionally mark request as processed here or after saving quote
+    setProcessingRequestId(req.id);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleMarkAsProcessed = async (reqId: string) => {
+    const { error } = await supabase
+      .from('quote_requests')
+      .update({ status: 'processed' })
+      .eq('id', reqId);
+
+    if (error) {
+      console.error('Error updating request status:', error);
+    } else {
+      await fetchRequests(); // Refresh list
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const quoteToSave = {
       ...formData,
@@ -72,6 +86,10 @@ const QuoteManager: React.FC<QuoteManagerProps> = ({ quotes, onAddQuote, onUpdat
       onUpdateQuote(quoteToSave);
     } else {
       onAddQuote(quoteToSave);
+      // If this came from a request, mark it as processed
+      if (processingRequestId) {
+        await handleMarkAsProcessed(processingRequestId);
+      }
     }
     closeForm();
   };
@@ -79,6 +97,7 @@ const QuoteManager: React.FC<QuoteManagerProps> = ({ quotes, onAddQuote, onUpdat
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingQuote(null);
+    setProcessingRequestId(null);
     setFormData({
       date: new Date().toISOString().split('T')[0],
       validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],

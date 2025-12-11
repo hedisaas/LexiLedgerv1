@@ -11,7 +11,7 @@ export const translations = {
     expenses: "Expenses",
     settings: "Settings",
     subtitle: "Sworn Translation Suite",
-    
+
     // Auth
     loginTitle: "LexiLedger Login",
     adminLogin: "Admin Login",
@@ -74,7 +74,7 @@ export const translations = {
     registryDesc: "Official log for court compliance.",
     seqNo: "Seq No.",
     batchUpload: "Batch / Multiple Files",
-    
+
     // Clients
     clientList: "Client List",
     totalSpent: "Total Spent",
@@ -158,10 +158,11 @@ export const translations = {
     myDocuments: "My Documents",
     downloadInvoice: "Invoice",
     downloadFile: "Translation",
-    
+
     // Sync
     syncing: "Syncing...",
     synced: "Synced to Cloud",
+    confirmMarkAsCompleted: "Invoice generated successfully. Do you want to mark this job as 'Completed'?",
   },
   fr: {
     // Sidebar
@@ -319,9 +320,10 @@ export const translations = {
     myDocuments: "Mes Documents",
     downloadInvoice: "Facture",
     downloadFile: "Traduction",
-    
+
     // Sync
     syncing: "Synchro...",
     synced: "Synchronisé",
+    confirmMarkAsCompleted: "Facture générée avec succès. Voulez-vous marquer ce dossier comme 'Terminé' ?",
   }
 };

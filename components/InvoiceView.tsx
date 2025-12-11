@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { TranslationJob, Quote, BusinessProfile } from '../types';
-import { Printer, Mail, Download, Loader2 } from 'lucide-react';
+import { Printer, Mail, Download, Loader2, CheckCircle } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import InvoicePDF from './InvoicePDF';
 import { saveAs } from 'file-saver';
@@ -15,13 +15,19 @@ interface InvoiceViewProps {
   type: 'invoice' | 'quote';
   profile: BusinessProfile;
   onClose: () => void;
+  onMarkAsCompleted?: () => void;
+  lang?: Lang;
 }
 
-const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose }) => {
+import { translations, Lang } from '../locales';
+
+const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose, onMarkAsCompleted, lang = 'en' }) => {
+  const t = translations[lang];
   if (!data) return null;
 
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = React.useState(false);
+  const [showCompletionModal, setShowCompletionModal] = React.useState(false);
   const [emailAddress, setEmailAddress] = React.useState('');
   const [isSending, setIsSending] = React.useState(false);
 
@@ -30,6 +36,14 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose 
       setIsGenerating(true);
       const blob = await pdf(<InvoicePDF data={data} type={type} profile={profile} />).toBlob();
       saveAs(blob, `${type === 'quote' ? 'Devis' : 'Facture'}_${data.clientName}_${data.id.slice(0, 6)}.pdf`);
+
+      // Prompt for completion
+      if (type === 'invoice' && onMarkAsCompleted && data.status !== 'Completed' && data.status !== 'Paid') {
+        setTimeout(() => {
+          setShowCompletionModal(true);
+        }, 500);
+      }
+
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
@@ -92,8 +106,13 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose 
   // Quote specific validity
   const quoteData = isQuote ? (data as Quote) : null;
 
-  // QR Code Data (Mock URL verification)
-  const qrData = encodeURIComponent(`https://lexiledger-verify.com/doc/${data.id}`);
+  // QR Code Data (Dynamic URL verification)
+  // User requested to force Vercel link even on localhost
+  const PRODUCTION_URL = 'https://lexiledger.vercel.app';
+  const baseUrl = PRODUCTION_URL;
+  // const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://lexiledger.com';
+
+  const qrData = encodeURIComponent(`${baseUrl}/verify/${data.id}`);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${qrData}`;
 
   return (
@@ -287,6 +306,36 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose 
                   {isSending ? 'Sending...' : 'Send Email'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Completion Modal */}
+      {showCompletionModal && (
+        <div className="fixed inset-0 z-[120] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center animate-in scale-95 duration-200">
+            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">{type === 'invoice' ? "Invoice Generated!" : "Success!"}</h3>
+            <p className="text-sm text-slate-500 mb-6">{t.confirmMarkAsCompleted}</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowCompletionModal(false)}
+                className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (onMarkAsCompleted) onMarkAsCompleted();
+                  setShowCompletionModal(false);
+                }}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium transition-colors"
+              >
+                Yes, Mark Completed
+              </button>
             </div>
           </div>
         </div>
