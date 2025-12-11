@@ -360,88 +360,92 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole, d
           )}
         </div>
 
-      </div>
 
-      {/* Top Clients Table (Admin Only) */}
-      {userRole === 'admin' && (
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800">Top Clients by Revenue</h3>
-            <Users className="w-5 h-5 text-slate-400" />
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-500 font-medium">
-                <tr>
-                  <th className="px-4 py-3 rounded-l-lg">Rank</th>
-                  <th className="px-4 py-3">Client Name</th>
-                  <th className="px-4 py-3 text-right rounded-r-lg">Total Revenue</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {topClients.map((client, index) => (
-                  <tr key={client.name} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-bold text-slate-400">#{index + 1}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{client.name}</td>
-                    <td className="px-4 py-3 text-right font-bold text-emerald-600">{client.value.toFixed(2)} TND</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
-      {/* Right Column: Action Items & Deadlines - Available to Both */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col">
-        <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Filter className="w-5 h-5 text-slate-500" /> {t.priorityActions}
-        </h3>
 
-        <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar max-h-[300px]">
-          {stats.upcomingDeadlines.length > 0 ? (
-            stats.upcomingDeadlines.map(job => {
-              const due = new Date(job.dueDate!);
-              const now = new Date();
-              now.setHours(0, 0, 0, 0);
-              const dueDay = new Date(due);
-              dueDay.setHours(0, 0, 0, 0);
-              const diff = Math.ceil((dueDay.getTime() - now.getTime()) / (1000 * 3600 * 24));
-              const isOverdue = diff < 0;
 
-              return (
-                <div key={job.id} className={`p-4 rounded-xl border-l-4 shadow-sm transition-transform hover:scale-[1.02] ${isOverdue ? 'border-rose-500 bg-rose-50' : 'border-amber-400 bg-amber-50'}`}>
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="font-bold text-slate-800 text-sm truncate">{job.clientName}</span>
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${isOverdue ? 'bg-rose-200 text-rose-700' : 'bg-amber-200 text-amber-700'}`}>
-                      {isOverdue ? t.overdue : `${diff} ${t.daysLeft}`}
-                    </span>
+        {/* Right Column: Action Items & Deadlines - Available to Both */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <Filter className="w-5 h-5 text-slate-500" /> {t.priorityActions}
+          </h3>
+
+          <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar max-h-[300px]">
+            {stats.upcomingDeadlines.length > 0 ? (
+              stats.upcomingDeadlines.map(job => {
+                const due = new Date(job.dueDate!);
+                const now = new Date();
+                now.setHours(0, 0, 0, 0);
+                const dueDay = new Date(due);
+                dueDay.setHours(0, 0, 0, 0);
+                const diff = Math.ceil((dueDay.getTime() - now.getTime()) / (1000 * 3600 * 24));
+                const isOverdue = diff < 0;
+
+                return (
+                  <div key={job.id} className={`p-4 rounded-xl border-l-4 shadow-sm transition-transform hover:scale-[1.02] ${isOverdue ? 'border-rose-500 bg-rose-50' : 'border-amber-400 bg-amber-50'}`}>
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-bold text-slate-800 text-sm truncate">{job.clientName}</span>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${isOverdue ? 'bg-rose-200 text-rose-700' : 'bg-amber-200 text-amber-700'}`}>
+                        {isOverdue ? t.overdue : `${diff} ${t.daysLeft}`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium truncate">{job.documentType}</p>
+                    <p className="text-xs text-slate-400 mt-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> {job.dueDate}</p>
                   </div>
-                  <p className="text-xs text-slate-600 font-medium truncate">{job.documentType}</p>
-                  <p className="text-xs text-slate-400 mt-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> {job.dueDate}</p>
-                </div>
-              )
-            })
-          ) : (
-            <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-              <Clock className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-400 font-medium">{t.noDeadlines}</p>
-              <p className="text-slate-400 text-xs mt-1">{t.caughtUp}</p>
-            </div>
-          )}
+                )
+              })
+            ) : (
+              <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                <Clock className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-slate-400 font-medium">{t.noDeadlines}</p>
+                <p className="text-slate-400 text-xs mt-1">{t.caughtUp}</p>
+              </div>
+            )}
 
-          {/* Collections Summary - Admin Only */}
-          {userRole === 'admin' && stats.pendingPayments > 0 && (
-            <div className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
-              <p className="text-xs text-indigo-600 uppercase font-bold mb-1 flex items-center gap-1"><DollarSign className="w-3 h-3" /> {t.collections}</p>
-              <p className="text-sm text-indigo-900">
-                <span className="font-bold">{stats.pendingPayments.toFixed(3)} TND</span> {t.pendingCollection}.
-              </p>
-            </div>
-          )}
+            {/* Collections Summary - Admin Only */}
+            {userRole === 'admin' && stats.pendingPayments > 0 && (
+              <div className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                <p className="text-xs text-indigo-600 uppercase font-bold mb-1 flex items-center gap-1"><DollarSign className="w-3 h-3" /> {t.collections}</p>
+                <p className="text-sm text-indigo-900">
+                  <span className="font-bold">{stats.pendingPayments.toFixed(3)} TND</span> {t.pendingCollection}.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
+
+
+        {/* Top Clients Table (Admin Only) */}
+        {userRole === 'admin' && (
+          <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Top Clients by Revenue</h3>
+              <Users className="w-5 h-5 text-slate-400" />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-slate-500 font-medium">
+                  <tr>
+                    <th className="px-4 py-3 rounded-l-lg">Rank</th>
+                    <th className="px-4 py-3">Client Name</th>
+                    <th className="px-4 py-3 text-right rounded-r-lg">Total Revenue</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {topClients.map((client, index) => (
+                    <tr key={client.name} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 font-bold text-slate-400">#{index + 1}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{client.name}</td>
+                      <td className="px-4 py-3 text-right font-bold text-emerald-600">{client.value.toFixed(2)} TND</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Monthly Tax & VAT Table - Admin Only */}
       {
