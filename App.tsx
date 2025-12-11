@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, FileText, PieChart, LogOut, Globe, Settings as SettingsIcon, Users, FileSignature, Cloud, Shield, Loader2, Database } from 'lucide-react';
+import { supabase } from './lib/supabase';
+import { LayoutDashboard, FileText, PieChart, LogOut, Globe, Settings as SettingsIcon, Users, FileSignature, Cloud, Shield, Loader2, Database, TrendingUp } from 'lucide-react';
 import { TranslationJob, Expense, Language, TranslationStatus, ExpenseCategory, BusinessProfile, Quote, QuoteStatus, Secretary } from './types';
 import Dashboard from './components/Dashboard';
 import TranslationManager from './components/TranslationManager';
@@ -14,6 +14,8 @@ import ClientPortal from './components/ClientPortal';
 import TranslationMemory from './components/TranslationMemory';
 import Logo from './components/Logo';
 import LandingPage from './components/LandingPage';
+import Analytics from './components/Analytics';
+import VerificationPage from './components/VerificationPage';
 import { translations, Lang } from './locales';
 import { ProfileCompletionModal } from './components/ProfileCompletionModal';
 import { useAuth, useUserRole } from './hooks/useAuth';
@@ -38,6 +40,13 @@ const App: React.FC = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { role: userRole, loading: roleLoading } = useUserRole(user);
 
+  // --- Routing (Simple implementation) ---
+  const path = window.location.pathname;
+  if (path.startsWith('/verify/')) {
+    const docId = path.split('/verify/')[1];
+    return <VerificationPage docId={docId} />;
+  }
+
   // --- Client Portal State (for non-authenticated client access) ---
   const [clientPortalUser, setClientPortalUser] = useState<string | null>(() => {
     return localStorage.getItem('lexiledger_client') || null;
@@ -57,7 +66,7 @@ const App: React.FC = () => {
   const t = translations[lang];
 
   // --- App State ---
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'translations' | 'clients' | 'quotes' | 'expenses' | 'resources' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'translations' | 'clients' | 'quotes' | 'expenses' | 'resources' | 'settings'>('dashboard');
   const [showLogin, setShowLogin] = useState(false);
 
   // --- Supabase Data Hooks ---
@@ -271,6 +280,9 @@ const App: React.FC = () => {
           {(!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
             <NavItem icon={LayoutDashboard} label={t.dashboard} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           )}
+          {(!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
+            <NavItem icon={TrendingUp} label="Analytics" active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
+          )}
           {(!secretaryPermissions || secretaryPermissions.canManageTranslations) && (
             <NavItem icon={FileText} label={t.translations} active={activeTab === 'translations'} onClick={() => setActiveTab('translations')} />
           )}
@@ -343,6 +355,9 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
           {activeTab === 'dashboard' && (!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
             <Dashboard jobs={jobs} expenses={expenses} lang={lang} userRole={effectiveRole} />
+          )}
+          {activeTab === 'analytics' && (!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
+            <Analytics jobs={jobs} expenses={expenses} lang={lang} />
           )}
           {activeTab === 'translations' && (!secretaryPermissions || secretaryPermissions.canManageTranslations) && (
             <TranslationManager

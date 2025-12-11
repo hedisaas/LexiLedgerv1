@@ -27,6 +27,9 @@ import Logo from './Logo';
 import FAQAccordion from './FAQAccordion';
 import { Lang } from '../locales';
 import Dashboard from './Dashboard';
+import FeatureShowcase from './FeatureShowcase';
+import HeroVisuals from './HeroVisuals';
+import FeatureCarousel from './FeatureCarousel';
 import { TranslationJob, Expense, TranslationStatus, ExpenseCategory, Language } from '../types';
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, ZoomIn, ZoomOut, RotateCw, RotateCcw, Save, FileDown, Sparkles, Database, BookOpen, RefreshCw, Maximize2 } from 'lucide-react';
 
@@ -209,55 +212,44 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
         { id: '3', date: getPastDate(25), description: "Paper Supplies", amount: 45, category: ExpenseCategory.VARIABLE_OFFICE },
     ];
 
-    // --- MOCKUP COMPONENTS ---
-
-    const DashboardMockup = () => (
-        <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden w-full max-w-5xl mx-auto">
-            {/* Fake Browser Header */}
-            <div className="bg-slate-50 border-b border-slate-200 p-3 flex items-center gap-2">
-                <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-400" />
-                    <div className="w-3 h-3 rounded-full bg-amber-400" />
-                    <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                </div>
-                <div className="flex-1 text-center text-xs text-slate-400 font-medium bg-white py-1 px-4 rounded-md border border-slate-100 max-w-xs mx-auto">
-                    app.lexiledger.com/dashboard
-                </div>
-            </div>
-
-            {/* Dashboard Screenshot */}
-            <div className="p-4 bg-slate-50 overflow-hidden flex justify-center items-start">
-                <img
-                    src="/dashboard-main-preview.png"
-                    alt="LexiLedger Dashboard Preview"
-                    className="rounded-lg shadow-xl w-full max-w-6xl hover:scale-105 transition-transform duration-500 cursor-pointer"
-                />
-            </div>
-        </div>
-    );
-
-    const WorkbenchPreview = () => (
-        <div className="bg-white rounded-xl shadow-2xl border border-slate-700 overflow-hidden w-full">
-            <img
-                src="/feature-highlight-list.png"
-                alt="LexiLedger Feature Spotlight - List View"
-                className="w-full h-auto"
-            />
-        </div>
-    );
-
-    const FloatingCard = ({ icon: Icon, title, subtitle, className, delay }: any) => (
-        <div className={`absolute bg-white p-4 rounded-xl shadow-xl border border-slate-100 flex items-center gap-3 animate-float ${className}`}
-            style={{ animationDelay: `${delay}s` }}>
-            <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600">
-                <Icon className="w-5 h-5" />
-            </div>
-            <div>
-                <div className="text-sm font-bold text-slate-800">{title}</div>
-                <div className="text-xs text-slate-500">{subtitle}</div>
-            </div>
-        </div>
-    );
+    const features = [
+        {
+            icon: Zap,
+            title: text.feature1Title,
+            description: text.feature1Desc,
+            color: "bg-amber-100 text-amber-600"
+        },
+        {
+            icon: FileText,
+            title: text.feature2Title,
+            description: text.feature2Desc,
+            color: "bg-teal-100 text-teal-600"
+        },
+        {
+            icon: ShieldCheck,
+            title: text.feature3Title,
+            description: text.feature3Desc,
+            color: "bg-blue-100 text-blue-600"
+        },
+        {
+            icon: UserCog,
+            title: text.feature4Title,
+            description: text.feature4Desc,
+            color: "bg-purple-100 text-purple-600"
+        },
+        {
+            icon: FolderLock,
+            title: text.feature5Title,
+            description: text.feature5Desc,
+            color: "bg-emerald-100 text-emerald-600"
+        },
+        {
+            icon: Users,
+            title: text.feature6Title,
+            description: text.feature6Desc,
+            color: "bg-rose-100 text-rose-600"
+        }
+    ];
 
     return (
         <div className="min-h-screen bg-white font-sans text-slate-900 overflow-x-hidden">
@@ -316,26 +308,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                         </button>
                     </div>
 
-                    {/* 3D Dashboard Preview */}
-                    <div className="relative max-w-5xl mx-auto perspective-1000 animate-fade-in-up delay-500">
-                        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10 bottom-0 h-20" />
-                        <DashboardMockup />
-
-                        {/* Floating Elements */}
-                        <FloatingCard
-                            icon={CheckCircle2}
-                            title={text.translationCompleted}
-                            subtitle={text.projectLabel}
-                            className="hidden md:flex top-10 -left-24 z-20"
-                            delay={0}
-                        />
-                        <FloatingCard
-                            icon={TrendingUp}
-                            title={text.revenueUpdated}
-                            subtitle={text.revenueAmount}
-                            className="hidden md:flex bottom-20 -right-16 z-20"
-                            delay={1.5}
-                        />
+                    {/* Dynamic Hero Visuals */}
+                    <div className="animate-fade-in-up delay-500">
+                        <HeroVisuals lang={lang} />
                     </div>
                 </div>
 
@@ -368,100 +343,25 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                         <p className="text-xl text-slate-600 max-w-2xl mx-auto">{text.everythingSubtitle}</p>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {[
-                            {
-                                icon: Zap,
-                                title: text.feature1Title,
-                                desc: text.feature1Desc,
-                                color: "bg-amber-100 text-amber-600"
-                            },
-                            {
-                                icon: FileText,
-                                title: text.feature2Title,
-                                desc: text.feature2Desc,
-                                color: "bg-teal-100 text-teal-600"
-                            },
-                            {
-                                icon: ShieldCheck,
-                                title: text.feature3Title,
-                                desc: text.feature3Desc,
-                                color: "bg-blue-100 text-blue-600"
-                            },
-                            {
-                                icon: UserCog,
-                                title: text.feature4Title,
-                                desc: text.feature4Desc,
-                                color: "bg-purple-100 text-purple-600"
-                            },
-                            {
-                                icon: FolderLock,
-                                title: text.feature5Title,
-                                desc: text.feature5Desc,
-                                color: "bg-emerald-100 text-emerald-600"
-                            },
-                            {
-                                icon: Users,
-                                title: text.feature6Title,
-                                desc: text.feature6Desc,
-                                color: "bg-rose-100 text-rose-600"
-                            }
-                        ].map((feature, i) => (
-                            <div key={i} className="group p-8 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1">
-                                <div className={`w-14 h-14 rounded-xl ${feature.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                                    <feature.icon className="w-7 h-7" />
-                                </div>
-                                <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
-                                <p className="text-slate-600 leading-relaxed">{feature.desc}</p>
-                            </div>
-                        ))}
-                    </div>
+                    <FeatureCarousel features={features} />
                 </div>
             </section>
 
-            {/* Feature Highlight - Split Screen */}
-            <section className="py-24 px-6 bg-slate-900 text-white overflow-hidden">
-                <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
-                    <div className="relative z-10">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-sm font-medium mb-6 border border-teal-500/30">
-                            <Star className="w-4 h-4" /> {text.spotlight}
-                        </div>
-                        <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-                            {text.focusTitle} <br />
-                            <span className="text-teal-400">{text.focusHighlight}</span>
-                        </h2>
-                        <p className="text-lg text-slate-300 mb-8 leading-relaxed">
-                            {text.focusDesc}
-                        </p>
-
-                        <ul className="space-y-4 mb-10">
-                            {[
-                                text.list1,
-                                text.list2,
-                                text.list3,
-                                text.list4
-                            ].map((item, i) => (
-                                <li key={i} className="flex items-center gap-3 text-slate-200">
-                                    <div className="w-6 h-6 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-400">
-                                        <Check className="w-4 h-4" />
-                                    </div>
-                                    {item}
-                                </li>
-                            ))}
-                        </ul>
-
-                        <button onClick={onGetStarted} className="group flex items-center gap-2 text-teal-400 font-semibold hover:text-teal-300 transition-colors">
-                            {text.exploreFeatures} <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </button>
+            {/* Feature Showcase - Live Preview */}
+            <section className="py-24 px-6 bg-slate-50 overflow-hidden">
+                <div className="max-w-7xl mx-auto text-center mb-16">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-sm font-medium mb-6 border border-teal-200">
+                        <Star className="w-4 h-4" /> {text.spotlight}
                     </div>
-
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-blue-500/20 blur-3xl rounded-full" />
-                        <div className="relative bg-slate-800 rounded-2xl border border-slate-700 p-2 shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-500">
-                            <WorkbenchPreview />
-                        </div>
-                    </div>
+                    <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight">
+                        {text.focusTitle} <span className="text-teal-600">{text.focusHighlight}</span>
+                    </h2>
+                    <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+                        {text.focusDesc}
+                    </p>
                 </div>
+
+                <FeatureShowcase lang={lang} />
             </section>
 
             {/* FAQ Section */}

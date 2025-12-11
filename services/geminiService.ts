@@ -49,7 +49,7 @@ export const generateSwornTranslation = async (
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: {
         parts: [
           { inlineData: { mimeType: mimeType, data: base64Data } },
@@ -106,7 +106,7 @@ export const generateContent = async (prompt: string): Promise<string> => {
   return retryWithBackoff(async () => {
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-1.5-flash',
         contents: prompt,
         config: {
           temperature: 0.7,
@@ -163,7 +163,7 @@ export const getFinancialInsights = async (
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: prompt,
     });
 

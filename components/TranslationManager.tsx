@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { TranslationJob, Language, TranslationStatus } from '../types';
-import { Plus, Search, Printer, Edit2, Trash2, AlertCircle, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Camera, Upload, X, Copy, FileText, Languages, Save, Maximize2, Eye, Download, Code, LayoutTemplate, RotateCw, RotateCcw, RefreshCw, ZoomIn, ZoomOut, Move, ChevronDown, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, FileDown, Book, Database, BookOpen, CheckCircle, FolderOpen, AlignJustify, List as ListIcon, ListOrdered, Highlighter, Type, Palette, Sparkles } from 'lucide-react';
+import { Plus, Search, Printer, Edit2, Trash2, AlertCircle, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Camera, Upload, X, Copy, FileText, Languages, Save, Maximize2, Eye, Download, Code, LayoutTemplate, RotateCw, RotateCcw, RefreshCw, ZoomIn, ZoomOut, Move, ChevronDown, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, FileDown, Book, Database, BookOpen, CheckCircle, FolderOpen, AlignJustify, List as ListIcon, ListOrdered, Highlighter, Type, Palette, Sparkles, Loader2 } from 'lucide-react';
 import { generateSwornTranslation } from '../services/geminiService';
 import { findGlossaryMatches, findTMMatches } from '../services/tmService';
 import { Lang, translations } from '../locales';
 import RegistryView from './RegistryView';
+import { translateText } from '../services/aiService';
+import { generateSwornDocx } from '../services/documentGenerator';
 import AITranslationHelper from './AITranslationHelper';
 
 interface TranslationManagerProps {
@@ -256,30 +258,19 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     editorRef.current?.focus();
   };
 
-  const downloadAsWord = () => {
+  const downloadAsWord = async () => {
     if (!workbenchJob || !editorRef.current) return;
-
-    const content = editorRef.current.innerHTML;
-    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' 
-                          xmlns:w='urn:schemas-microsoft-com:office:word' 
-                          xmlns='http://www.w3.org/TR/REC-html40'>
-                          <head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title>
-                          <style>
-                            body { font-family: 'Times New Roman', serif; }
-                            table { border-collapse: collapse; width: 100%; }
-                            td, th { border: 1px solid black; padding: 5px; }
-                          </style>
-                          </head><body>`;
-    const footer = "</body></html>";
-    const sourceHTML = header + content + footer;
-
-    const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
-    const fileDownload = document.createElement("a");
-    document.body.appendChild(fileDownload);
-    fileDownload.href = source;
-    fileDownload.download = `${workbenchJob.clientName.replace(/\s+/g, '_')}_translation.doc`;
-    fileDownload.click();
-    document.body.removeChild(fileDownload);
+    try {
+      await generateSwornDocx(
+        editorRef.current.innerHTML,
+        workbenchJob.clientName,
+        workbenchJob.documentType,
+        workbenchJob.sourceLang.toString(),
+        workbenchJob.targetLang.toString()
+      );
+    } catch (error: any) {
+      alert(`Failed to generate DOCX: ${error.message}`);
+    }
   };
 
   const rotateImage = (base64Str: string, degrees: number): Promise<string> => {
@@ -308,29 +299,40 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     });
   };
 
-  const triggerWorkbenchAi = async () => {
-    if (!workbenchJob || !workbenchJob.attachments || workbenchJob.attachments.length === 0) {
-      alert("No document image found to translate.");
-      return;
-    }
-
+  const handleMagicDraft = async () => {
     setIsAiTranslating(true);
     try {
-      const processedImage = await rotateImage(workbenchJob.attachments[0], rotation);
-      const result = await generateSwornTranslation(
-        workbenchJob.sourceLang.toString(),
-        workbenchJob.targetLang.toString(),
-        workbenchJob.documentType,
-        processedImage,
-        targetOrientation
-      );
-
-      setWorkbenchJob(prev => prev ? ({ ...prev, translatedText: result }) : null);
-      if (editorRef.current) {
-        editorRef.current.innerHTML = result;
+      // 1. If Image exists, use Vision AI (generateSwornTranslation)
+      if (workbenchJob?.attachments && workbenchJob.attachments.length > 0) {
+        const processedImage = await rotateImage(workbenchJob.attachments[0], rotation);
+        const result = await generateSwornTranslation(
+          workbenchJob.sourceLang.toString(),
+          workbenchJob.targetLang.toString(),
+          workbenchJob.documentType,
+          processedImage,
+          targetOrientation
+        );
+        if (editorRef.current) editorRef.current.innerHTML = result;
+        setWorkbenchJob(prev => prev ? ({ ...prev, translatedText: result }) : null);
+      }
+      // 2. If no image, but text exists (e.g. pasted), use Text AI (Edge Function)
+      else if (editorRef.current && editorRef.current.innerText.trim().length > 0) {
+        const textToTranslate = editorRef.current.innerText;
+        const result = await translateText(
+          textToTranslate,
+          workbenchJob?.sourceLang.toString() || 'auto',
+          workbenchJob?.targetLang.toString() || 'en',
+          workbenchJob?.documentType || 'document'
+        );
+        // Convert plain text result to HTML paragraphs
+        const htmlResult = result.split('\n').map((line: string) => `<p>${line}</p>`).join('');
+        if (editorRef.current) editorRef.current.innerHTML = htmlResult;
+        setWorkbenchJob(prev => prev ? ({ ...prev, translatedText: htmlResult }) : null);
+      } else {
+        alert("Please upload a document image or paste text to translate.");
       }
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
+      alert(`AI Error: ${error.message}`);
     } finally {
       setIsAiTranslating(false);
     }
@@ -619,6 +621,14 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
               <p className="text-xs text-slate-500">{workbenchJob.clientName} • {workbenchJob.documentType}</p>
             </div>
             <div className="flex gap-3">
+              <button
+                onClick={handleMagicDraft}
+                disabled={isAiTranslating}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
+              >
+                {isAiTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                Magic Draft
+              </button>
               <button onClick={downloadAsWord} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><FileDown className="w-4 h-4" /> {t.downloadDoc}</button>
               <button onClick={handleWorkbenchSave} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><Save className="w-4 h-4" /> {t.save}</button>
               <button onClick={closeWorkbench} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors">{t.close}</button>
@@ -819,8 +829,8 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
                   </div>
 
                   <div className="ml-auto">
-                    <button onClick={triggerWorkbenchAi} disabled={isAiTranslating || !workbenchJob.attachments?.length} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
-                      <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : t.autoTranslate}
+                    <button onClick={handleMagicDraft} disabled={isAiTranslating} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
+                      <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : "Magic Draft"}
                     </button>
                   </div>
                 </div>
@@ -1037,8 +1047,8 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
                     <button onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
-                <button onClick={triggerWorkbenchAi} disabled={isAiTranslating || !workbenchJob.attachments?.length} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
-                  <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : t.autoTranslate}
+                <button onClick={handleMagicDraft} disabled={isAiTranslating} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
+                  <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : "Magic Draft"}
                 </button>
               </div>
 

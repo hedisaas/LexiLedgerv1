@@ -123,3 +123,16 @@ export interface Secretary {
   permissions: SecretaryPermissions;
   created_at?: string;
 }
+
+export interface QuoteRequest {
+  id: string;
+  client_name: string;
+  client_email: string;
+  source_lang: string;
+  target_lang: string;
+  document_type: string;
+  notes?: string;
+  file_path?: string;
+  status: 'pending' | 'processed' | 'rejected';
+  created_at: string;
+}

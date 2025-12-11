@@ -10,8 +10,13 @@
     "postinstall": "node -e \"console.log('\\n⚠️  Remember to create .env.local with your Supabase and Gemini credentials!\\nSee QUICKSTART.md for details.\\n')\""
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@google/genai": "^1.30.0",
+    "@react-pdf/renderer": "^4.3.1",
     "@supabase/supabase-js": "^2.84.0",
+    "@types/file-saver": "^2.0.7",
+    "buffer": "^6.0.3",
+    "file-saver": "^2.0.5",
     "lucide-react": "^0.554.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

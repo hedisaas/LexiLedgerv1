@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
-import { Quote, QuoteStatus, Language, TranslationJob, TranslationStatus } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Quote, QuoteStatus, Language, TranslationJob, TranslationStatus, QuoteRequest } from '../types';
 import { Lang, translations } from '../locales';
-import { Plus, Printer, CheckCircle, FileText, Trash2, Edit2, ArrowRight } from 'lucide-react';
+import { Plus, Printer, CheckCircle, FileText, Trash2, Edit2, ArrowRight, Inbox, ExternalLink } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface QuoteManagerProps {
   quotes: Quote[];
@@ -18,6 +19,7 @@ const QuoteManager: React.FC<QuoteManagerProps> = ({ quotes, onAddQuote, onUpdat
   const t = translations[lang];
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+  const [requests, setRequests] = useState<QuoteRequest[]>([]);
   const [formData, setFormData] = useState<Partial<Quote>>({
     date: new Date().toISOString().split('T')[0],
     validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +30 days
@@ -27,6 +29,37 @@ const QuoteManager: React.FC<QuoteManagerProps> = ({ quotes, onAddQuote, onUpdat
     pageCount: 1,
     priceTotal: 0
   });
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (data) setRequests(data);
+  };
+
+  const handleProcessRequest = (req: QuoteRequest) => {
+    setFormData({
+      date: new Date().toISOString().split('T')[0],
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      clientName: req.client_name,
+      clientInfo: req.client_email, // Use email as info for now
+      documentType: req.document_type,
+      sourceLang: req.source_lang as Language || Language.ENGLISH,
+      targetLang: req.target_lang as Language || Language.FRENCH,
+      status: QuoteStatus.DRAFT,
+      pageCount: 1,
+      priceTotal: 0
+    });
+    setIsFormOpen(true);
+    // Optionally mark request as processed here or after saving quote
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,6 +106,46 @@ const QuoteManager: React.FC<QuoteManagerProps> = ({ quotes, onAddQuote, onUpdat
           <Plus className="w-4 h-4" /> {t.newQuote}
         </button>
       </div>
+
+      {/* Pending Requests Section */}
+      {requests.length > 0 && (
+        <div className="mb-8 bg-indigo-50 border border-indigo-100 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2">
+            <Inbox className="w-5 h-5" /> Pending Quote Requests
+          </h3>
+          <div className="grid gap-4">
+            {requests.map(req => (
+              <div key={req.id} className="bg-white p-4 rounded-lg shadow-sm border border-indigo-100 flex justify-between items-center">
+                <div>
+                  <div className="font-bold text-slate-900">{req.client_name} <span className="text-slate-400 font-normal text-sm">({req.client_email})</span></div>
+                  <div className="text-sm text-slate-600 mt-1">
+                    <span className="font-medium">{req.documentType}</span> • {req.source_lang} → {req.target_lang}
+                  </div>
+                  {req.notes && <div className="text-xs text-slate-500 mt-1 italic">"{req.notes}"</div>}
+                </div>
+                <div className="flex items-center gap-3">
+                  {req.file_path && (
+                    <a
+                      href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${req.file_path}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center gap-1"
+                    >
+                      <FileText className="w-4 h-4" /> View File
+                    </a>
+                  )}
+                  <button
+                    onClick={() => handleProcessRequest(req)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md text-sm font-bold shadow-sm transition-colors"
+                  >
+                    Process Request
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="overflow-y-auto h-full">
