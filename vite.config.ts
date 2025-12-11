@@ -51,24 +51,8 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1000, // Increase warning limit to 1000kB
       rollupOptions: {
         output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              // Isolate largest dependencies only
-              if (id.includes('@react-pdf')) {
-                return 'pdf-worker';
-              }
-              if (id.includes('@supabase')) {
-                return 'supabase';
-              }
-              if (id.includes('lucide-react')) {
-                return 'icons';
-              }
-
-              // Keep React, ReactDOM, and others in the main vendor chunk 
-              // to avoid "reading forwardRef of undefined" errors caused by split loading
-              return 'vendor';
-            }
-          }
+          // Automatic chunking is safer for now. 
+          // The PWA cache limit increase (6MB) allows for larger chunks.
         }
       }
     }
