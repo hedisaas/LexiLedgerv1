@@ -14,7 +14,7 @@ import ClientPortal from './components/ClientPortal';
 import TranslationMemory from './components/TranslationMemory';
 import Logo from './components/Logo';
 import LandingPage from './components/LandingPage';
-import Analytics from './components/Analytics';
+// import Analytics from './components/Analytics';
 import VerificationPage from './components/VerificationPage';
 import { translations, Lang } from './locales';
 import { ProfileCompletionModal } from './components/ProfileCompletionModal';
@@ -66,7 +66,7 @@ const App: React.FC = () => {
   const t = translations[lang];
 
   // --- App State ---
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'translations' | 'clients' | 'quotes' | 'expenses' | 'resources' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'translations' | 'clients' | 'quotes' | 'expenses' | 'resources' | 'settings'>('dashboard');
   const [showLogin, setShowLogin] = useState(false);
 
   // --- Supabase Data Hooks ---
@@ -286,9 +286,7 @@ const App: React.FC = () => {
           {(!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
             <NavItem icon={LayoutDashboard} label={t.dashboard} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           )}
-          {(!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
-            <NavItem icon={TrendingUp} label="Analytics" active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
-          )}
+          {/* Analytics Removed and merged into Dashboard */}
           {(!secretaryPermissions || secretaryPermissions.canManageTranslations) && (
             <NavItem icon={FileText} label={t.translations} active={activeTab === 'translations'} onClick={() => setActiveTab('translations')} />
           )}
@@ -361,9 +359,6 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
           {activeTab === 'dashboard' && (!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
             <Dashboard jobs={jobs} expenses={expenses} lang={lang} userRole={effectiveRole} />
-          )}
-          {activeTab === 'analytics' && (!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
-            <Analytics jobs={jobs} expenses={expenses} lang={lang} />
           )}
           {activeTab === 'translations' && (!secretaryPermissions || secretaryPermissions.canManageTranslations) && (
             <TranslationManager
