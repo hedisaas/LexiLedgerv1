@@ -8,6 +8,7 @@ import RegistryView from './RegistryView';
 import { translateText } from '../services/aiService';
 import { generateSwornDocx } from '../services/documentGenerator';
 import AITranslationHelper from './AITranslationHelper';
+import { useDocumentStorage } from '../hooks/useDocumentStorage';
 
 interface TranslationManagerProps {
   jobs: TranslationJob[];
@@ -36,6 +37,8 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
   // Workbench State
   const [workbenchJob, setWorkbenchJob] = useState<TranslationJob | null>(null);
   const [isAiTranslating, setIsAiTranslating] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const { uploadDocument, uploading: isUploading } = useDocumentStorage();
   const [rotation, setRotation] = useState(0);
   const [targetOrientation, setTargetOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [zoomLevel, setZoomLevel] = useState(0.85);
@@ -121,27 +124,28 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files) as File[];
-      const newAttachments: string[] = [];
+      setPendingFiles(prev => [...prev, ...files]);
 
+      const newAttachments: string[] = [];
       let processedCount = 0;
+
       files.forEach(file => {
-        if (file.size > 4 * 1024 * 1024) {
-          alert(`File ${file.name} is too large. Skip.`);
+        if (file.size > 10 * 1024 * 1024) { // Increased limit to 10MB
+          alert(`File ${file.name} is too large. Max 10MB.`);
           processedCount++;
           return;
         }
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          newAttachments.push(reader.result as string);
-          processedCount++;
-          if (processedCount === files.length) {
-            setFormData(prev => ({
-              ...prev,
-              attachments: [...(prev.attachments || []), ...newAttachments]
-            }));
-          }
-        };
-        reader.readAsDataURL(file);
+        // Create local preview URL
+        const previewUrl = URL.createObjectURL(file);
+        (file as any).previewUrl = previewUrl; // Attach URL to file for tracking
+        newAttachments.push(previewUrl);
+        processedCount++;
+        if (processedCount === files.length) {
+          setFormData(prev => ({
+            ...prev,
+            attachments: [...(prev.attachments || []), ...newAttachments]
+          }));
+        }
       });
     }
   };
@@ -153,11 +157,42 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const jobId = editingJob ? editingJob.id : crypto.randomUUID();
+
+    // Upload pending files if any
+    let finalAttachments = [...(formData.attachments || [])];
+
+    // Remove Blob URLs (previews) from attachments before saving
+    finalAttachments = finalAttachments.filter(url => !url.startsWith('blob:'));
+
+    // Filter pending files to only include those still present in attachments (via previewUrl)
+    const filesToUpload = pendingFiles.filter(file =>
+      formData.attachments?.includes((file as any).previewUrl)
+    );
+
+    if (filesToUpload.length > 0) {
+      try {
+        const uploadPromises = filesToUpload.map(file =>
+          uploadDocument(file, jobId, 'source')
+        );
+        const uploadedUrls = await Promise.all(uploadPromises);
+        // Filter out nulls and add to attachments
+        uploadedUrls.forEach(url => {
+          if (url) finalAttachments.push(url);
+        });
+      } catch (error) {
+        console.error("Upload failed", error);
+        alert("Failed to upload some files. Please try again.");
+        return;
+      }
+    }
+
     const jobToSave = {
       ...formData,
-      id: editingJob ? editingJob.id : crypto.randomUUID(),
+      id: jobId,
+      attachments: finalAttachments
     } as TranslationJob;
 
     // INTERCEPT COMPLETION
@@ -172,31 +207,39 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     } else {
       onAddJob(jobToSave);
     }
+    setPendingFiles([]); // Clear pending
     closeForm();
   };
 
-  const handleCompletionUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCompletionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && pendingCompletionJob) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const finalDoc = reader.result as string;
-        const finalJob = { ...pendingCompletionJob, finalDocument: finalDoc };
 
-        if (editingJob) onUpdateJob(finalJob);
-        else onAddJob(finalJob);
+      try {
+        const uploadedUrl = await uploadDocument(file, pendingCompletionJob.id, 'translation');
 
-        setIsCompletionModalOpen(false);
-        setPendingCompletionJob(null);
-        closeForm();
-      };
-      reader.readAsDataURL(file);
+        if (uploadedUrl) {
+          const finalJob = { ...pendingCompletionJob, finalDocument: uploadedUrl };
+          if (editingJob) onUpdateJob(finalJob);
+          else onAddJob(finalJob);
+
+          setIsCompletionModalOpen(false);
+          setPendingCompletionJob(null);
+          closeForm();
+        } else {
+          alert("Failed to upload final document.");
+        }
+      } catch (error) {
+        console.error("Completion upload failed", error);
+        alert("Upload error occurred.");
+      }
     }
   };
 
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingJob(null);
+    setPendingFiles([]);
     setFormData({
       date: new Date().toISOString().split('T')[0],
       sourceLang: Language.ENGLISH,
