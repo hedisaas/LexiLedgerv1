@@ -31,6 +31,10 @@ export default defineConfig(({ mode }) => {
               purpose: 'any maskable'
             }
           ]
+        },
+        workbox: {
+          maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // Increase limit to 6 MB
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2}']
         }
       })
     ],
@@ -41,6 +45,31 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+      }
+    },
+    build: {
+      chunkSizeWarningLimit: 1000, // Increase warning limit to 1000kB
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              // Split vendor chunks
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'vendor-react';
+              }
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase';
+              }
+              if (id.includes('@react-pdf')) {
+                return 'vendor-pdf';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
+              return 'vendor'; // All other node_modules go here
+            }
+          }
+        }
       }
     }
   };
