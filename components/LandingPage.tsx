@@ -78,6 +78,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
             revenueUpdated: "Revenue Updated",
             revenueAmount: "+ 450.000 TND received",
             trustedBy: "Trusted by 500+ Sworn Translators",
+            proofHeading: "Trusted by hundreds of certified translators and legal professionals",
+            proof1: "Official document workflows",
+            proof2: "Secure archive & invoicing",
+            proof3: "Built for sworn translators",
             everythingTitle: "Everything you need to run your business.",
             everythingSubtitle: "Stop juggling 5 different apps. LexiLedger brings your translations, invoices, clients, and documents into one seamless workflow.",
             feature1Title: "AI-Powered Translation",
@@ -142,6 +146,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
             revenueUpdated: "Revenus Mis à Jour",
             revenueAmount: "+ 450,000 TND reçus",
             trustedBy: "Approuvé par 500+ Traducteurs Assermentés",
+            proofHeading: "Approuvé par des centaines de traducteurs certifiés et professionnels du droit",
+            proof1: "Flux de travail de documents officiels",
+            proof2: "Archivage et facturation sécurisés",
+            proof3: "Conçu pour les traducteurs assermentés",
             everythingTitle: "Tout ce dont vous avez besoin pour gérer votre activité.",
             everythingSubtitle: "Arrêtez de jongler avec 5 applications différentes. LexiLedger rassemble vos traductions, factures, clients et documents dans un flux de travail fluide.",
             feature1Title: "Traduction par IA",
@@ -322,15 +330,28 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
             </section>
 
             {/* Social Proof */}
-            <section className="py-10 border-y border-slate-100 bg-slate-50/50">
+            <section className="py-12 border-y border-slate-100 bg-slate-50/50">
                 <div className="max-w-7xl mx-auto px-6 text-center">
-                    <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-8">{text.trustedBy}</p>
-                    <div className="flex flex-wrap justify-center gap-12 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-                        {['GlobalTrans', 'LegalLingua', 'CertifiedPro', 'SwornNet', 'LexiCorp'].map((name, i) => (
-                            <span key={i} className="text-xl font-bold text-slate-600 flex items-center gap-2">
-                                <Globe className="w-5 h-5" /> {name}
-                            </span>
-                        ))}
+                    <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-8">{text.proofHeading}</p>
+                    <div className="flex flex-wrap justify-center gap-8 md:gap-16">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-teal-100 rounded-full text-teal-600">
+                                <FileText className="w-5 h-5" />
+                            </div>
+                            <span className="text-lg font-bold text-slate-700">{text.proof1}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-teal-100 rounded-full text-teal-600">
+                                <ShieldCheck className="w-5 h-5" />
+                            </div>
+                            <span className="text-lg font-bold text-slate-700">{text.proof2}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-teal-100 rounded-full text-teal-600">
+                                <UserCog className="w-5 h-5" />
+                            </div>
+                            <span className="text-lg font-bold text-slate-700">{text.proof3}</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -348,20 +369,28 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
             </section>
 
             {/* Feature Showcase - Live Preview */}
-            <section className="py-24 px-6 bg-slate-50 overflow-hidden">
-                <div className="max-w-7xl mx-auto text-center mb-16">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-sm font-medium mb-6 border border-teal-200">
+            <section className="py-24 px-6 bg-teal-950 overflow-hidden relative">
+                {/* Background decorative elements */}
+                <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
+                    <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-teal-500/30 rounded-full blur-3xl mix-blend-screen" />
+                    <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-blue-600/30 rounded-full blur-3xl mix-blend-screen" />
+                </div>
+
+                <div className="max-w-7xl mx-auto text-center mb-16 relative z-10">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-900/50 text-teal-300 text-sm font-medium mb-6 border border-teal-700/50 backdrop-blur-sm">
                         <Star className="w-4 h-4" /> {text.spotlight}
                     </div>
-                    <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight">
-                        {text.focusTitle} <span className="text-teal-600">{text.focusHighlight}</span>
+                    <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+                        {text.focusTitle} <span className="text-teal-400">{text.focusHighlight}</span>
                     </h2>
-                    <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+                    <p className="text-xl text-slate-300 max-w-2xl mx-auto">
                         {text.focusDesc}
                     </p>
                 </div>
 
-                <FeatureShowcase lang={lang} />
+                <div className="relative z-10">
+                    <FeatureShowcase lang={lang} />
+                </div>
             </section>
 
             {/* FAQ Section */}
