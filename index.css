@@ -1,9 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-slate-850: #1e293b;
+  --color-slate-900: #0f172a;
+
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-850: #0c4a6e;
+  --color-primary-900: #082f49;
+}
 
 @layer utilities {
-    .text-balance {
-      text-wrap: balance;
-    }
+  .text-balance {
+    text-wrap: balance;
+  }
 }
