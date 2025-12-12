@@ -18,6 +18,7 @@ import LandingPage from './components/LandingPage';
 import VerificationPage from './components/VerificationPage';
 import { translations, Lang } from './locales';
 import { ProfileCompletionModal } from './components/ProfileCompletionModal';
+import TemplateVault from './components/TemplateVault';
 import { useAuth, useUserRole } from './hooks/useAuth';
 import { useTranslationJobs, useExpenses, useQuotes, useBusinessProfile } from './hooks/useSupabaseData';
 
@@ -66,7 +67,7 @@ const App: React.FC = () => {
   const t = translations[lang];
 
   // --- App State ---
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'translations' | 'clients' | 'quotes' | 'expenses' | 'resources' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'translations' | 'clients' | 'quotes' | 'expenses' | 'vault' | 'resources' | 'settings'>('dashboard');
   const [showLogin, setShowLogin] = useState(false);
 
   // --- Supabase Data Hooks ---
@@ -300,6 +301,7 @@ const App: React.FC = () => {
           {(!secretaryPermissions || secretaryPermissions.canManageExpenses) && effectiveRole === 'admin' && (
             <NavItem icon={PieChart} label={t.expenses} active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} />
           )}
+          <NavItem icon={Database} label="Vault" active={activeTab === 'vault'} onClick={() => setActiveTab('vault')} />
           {(!secretaryPermissions || secretaryPermissions.canViewSettings) && (
             <NavItem icon={SettingsIcon} label={t.settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
           )}
@@ -394,6 +396,9 @@ const App: React.FC = () => {
               onDeleteExpense={handleDeleteExpense}
               lang={lang}
             />
+          )}
+          {activeTab === 'vault' && (
+            <TemplateVault lang={lang} />
           )}
           {activeTab === 'settings' && businessProfile && (!secretaryPermissions || secretaryPermissions.canViewSettings) && (
             <Settings
