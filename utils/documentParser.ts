@@ -90,6 +90,18 @@ const DOCUMENT_TYPES = [
             es: ['estado de cuenta', 'extracto bancario'],
             ar: ['كشف حساب', 'بيان بنكي']
         }
+    },
+    {
+        type: 'Invoice',
+        category: 'Financial',
+        keywords: {
+            en: ['invoice', 'bill', 'receipt', 'payment due'],
+            fr: ['facture', 'reçu', 'quittance', 'note d\'honoraires'],
+            de: ['rechnung', 'quittung', 'zahlungsbeleg'],
+            it: ['fattura', 'ricevuta', 'scontrino'],
+            es: ['factura', 'recibo', 'cuenta'],
+            ar: ['فاتورة', 'إيصال', 'وصل']
+        }
     }
 ];
 
