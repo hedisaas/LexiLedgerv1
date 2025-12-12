@@ -69,11 +69,71 @@ const DOCUMENT_TYPES = [
         category: 'ID Documents',
         keywords: {
             en: ['driving license', 'driver license', 'driving permit'],
-            fr: ['permis de conduire', 'permis de conduc'],
+            fr: ['permis de conduire', 'permis de circul'],
             de: ['führerschein', 'fahrerlaubnis'],
             it: ['patente di guida', 'permesso di guida'],
             es: ['permiso de conducir', 'carnet de conducir', 'licencia de conducir'],
             ar: ['رخصة سياقة', 'إجازة سوق']
+        }
+    },
+    {
+        type: 'Identity Document',
+        category: 'ID Documents',
+        keywords: {
+            en: ['identity card', 'id card', 'passport', 'national id', 'residence permit'],
+            fr: ['carte d\'identité', 'cin', 'passeport', 'titre de séjour', 'carte nationale'],
+            de: ['personalausweis', 'reisepass', 'aufenthaltstitel'],
+            it: ['carta d\'identità', 'passaporto', 'permesso di soggiorno'],
+            es: ['documento de identidad', 'dni', 'pasaporte', 'permiso de residencia'],
+            ar: ['بطاقة تعريف', 'جواز سفر', 'بطاقة هوية']
+        }
+    },
+    {
+        type: 'Business Document',
+        category: 'Legal',
+        keywords: {
+            en: ['business registration', 'certificate of incorporation', 'articles of association', 'tax registration', 'trade register'],
+            fr: ['registre de commerce', 'kbis', 'statuts', 'matricule fiscale', 'entreprise individuelle', 'déclaration d\'existence'],
+            de: ['handelsregisterauszug', 'gewerbeanmeldung', 'satzung', 'gesellschaftervertrag'],
+            it: ['registro delle imprese', 'visura camerale', 'atto costitutivo', 'statuto'],
+            es: ['registro mercantil', 'escritura de constitución', 'estatutos', 'nif'],
+            ar: ['سجل تجاري', 'باتيندا', 'نظام أساسي', 'رخصة تجارية']
+        }
+    },
+    {
+        type: 'Legal Certification',
+        category: 'Legal',
+        keywords: {
+            en: ['sworn statement', 'affidavit', 'certificate of', 'attestation', 'declaration'],
+            fr: ['déclaration sur l\'honneur', 'attestation', 'certificat de', 'témoignage'],
+            de: ['eidesstattliche versicherung', 'beglaubigung', 'bescheinigung'],
+            it: ['autocertificazione', 'dichiarazione sostitutiva', 'attestato'],
+            es: ['declaración jurada', 'certificado de', 'testimonio'],
+            ar: ['تصريح بالشرف', 'شهادة', 'إشهاد']
+        }
+    },
+    {
+        type: 'Technical Document',
+        category: 'Technical',
+        keywords: {
+            en: ['technical sheet', 'specification', 'user manual', 'guide', 'datasheet'],
+            fr: ['fiche technique', 'manuel d\'utilisation', 'guide utilisateur', 'spécifications'],
+            de: ['technisches datenblatt', 'bedienungsanleitung', 'handbuch'],
+            it: ['scheda tecnica', 'manuale d\'uso', 'specifiche tecniche'],
+            es: ['ficha técnica', 'manual de usuario', 'especificaciones'],
+            ar: ['بطاقة تقنية', 'دليل المستخدم', 'مواصفات']
+        }
+    },
+    {
+        type: 'Employment Document',
+        category: 'Professional',
+        keywords: {
+            en: ['cv', 'resume', 'curriculum vitae', 'cover letter', 'employment contract'],
+            fr: ['cv', 'curriculum vitae', 'lettre de motivation', 'contrat de travail'],
+            de: ['lebenslauf', 'bewerbungsschreiben', 'arbeitsvertrag'],
+            it: ['curriculum vitae', 'lettera di presentazione', 'contratto di lavoro'],
+            es: ['curriculum vitae', 'carta de presentación', 'contrato de trabajo'],
+            ar: ['سيرة ذاتية', 'عقد عمل', 'رسالة تحفيز']
         }
     },
     {
