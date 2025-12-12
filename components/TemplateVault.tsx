@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, Check, X, Shield, RefreshCw, Layers, Search, GraduationCap, Car, Scale, Landmark } from 'lucide-react';
 import { parseFileContent, DetectedDocType } from '../utils/documentParser';
@@ -21,6 +21,28 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
     const [scannedFiles, setScannedFiles] = useState<ScannedFile[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [filter, setFilter] = useState('');
+    const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
+
+    const fetchTemplates = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+            .from('document_templates')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching templates:', error);
+        } else {
+            setSavedTemplates(data || []);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchTemplates();
+    }, [fetchTemplates]);
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         // Add files to state with 'scanning' status
@@ -104,6 +126,13 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
             }
         }
         setIsProcessing(false);
+        // Refresh the saved list after adding new ones
+        fetchTemplates();
+
+        // Clear completed files after a delay
+        setTimeout(() => {
+            setScannedFiles(prev => prev.filter(f => f.status !== 'complete'));
+        }, 2000);
     };
 
     const removeFile = (id: string) => {
@@ -151,6 +180,24 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
             }
             return f;
         }));
+    };
+
+    // Helper to delete saved template
+    const deleteTemplate = async (id: string, filePath: string) => {
+        if (!confirm('Are you sure you want to delete this template?')) return;
+
+        try {
+            const { error: dbError } = await supabase.from('document_templates').delete().eq('id', id);
+            if (dbError) throw dbError;
+
+            // Optionally delete from storage (if not used elsewhere)
+            // const { error: storageError } = await supabase.storage.from('templates').remove([filePath]);
+
+            fetchTemplates();
+        } catch (err) {
+            console.error('Error deleting template:', err);
+            alert('Failed to delete template');
+        }
     };
 
     return (
@@ -255,6 +302,60 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
                     </div>
                 </div>
             )}
+
+            {/* SAVED TEMPLATES SECTION */}
+            <div className="border-t border-slate-200 pt-8">
+                <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-teal-600" />
+                    Vault Archive ({savedTemplates.length})
+                </h3>
+
+                {savedTemplates.length === 0 ? (
+                    <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                        <Search className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <p className="text-slate-500">Your vault is empty. Upload documents to archive them safely.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {savedTemplates.map((template) => (
+                            <div key={template.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group relative">
+                                <button onClick={() => deleteTemplate(template.id, template.file_path)} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                    <X className="w-4 h-4" />
+                                </button>
+
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 bg-slate-50 rounded-lg">
+                                        {getIconForType(template.detected_type)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600">
+                                                {template.detected_type}
+                                            </span>
+                                        </div>
+                                        <h4 className="font-semibold text-slate-800 truncate text-sm mb-1" title={template.title}>{template.title}</h4>
+
+                                        <div className="flex flex-wrap gap-1 mb-2">
+                                            {(template.tags || []).slice(0, 3).map((tag: string, idx: number) => (
+                                                <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-100 truncate max-w-[80px]">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                            {(template.tags || []).length > 3 && (
+                                                <span className="text-[10px] px-1.5 py-0.5 text-slate-400">+{template.tags.length - 3}</span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-0.5 truncate flex justify-between">
+                                            <span>{template.original_filename}</span>
+                                            <span>{new Date(template.created_at).toLocaleDateString()}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
