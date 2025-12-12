@@ -209,16 +209,56 @@ const parsePdf = async (file: File): Promise<string> => {
     return fullText.toLowerCase();
 };
 
+
+const extractTitleFromContent = (content: string): string => {
+    // Take the first 500 chars to look for a title
+    const startText = content.substring(0, 500);
+    // Split by newlines and find the first non-empty line that looks like a title
+    const lines = startText.split(/[\n\r]+/);
+    for (const line of lines) {
+        const trimmed = line.trim();
+        // Skip dates, page numbers, or very short/long lines
+        if (
+            trimmed.length > 3 &&
+            trimmed.length < 100 &&
+            !/^\d+$/.test(trimmed) && // Not just numbers
+            !/page\s*\d+/i.test(trimmed) // Not "Page 1"
+        ) {
+            // Capitalize first letter of words for better presentation
+            return trimmed.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        }
+    }
+    return '';
+};
+
 const detectType = (content: string, filename: string): DetectedDocType => {
     const lowerContent = content.toLowerCase();
     const lowerFilename = filename.toLowerCase();
+    let dynamicTags: string[] = [];
 
-    // Weights: Content match = 1, Filename match = 2 (Filename is usually a strong indicator if present)
+    // 1. Filename Tag (Always add cleaned filename as a tag)
+    const cleanFilename = filename
+        .replace(/\.[^/.]+$/, "") // Remove extension
+        .replace(/[_-]/g, " ") // Replace separators
+        .replace(/\s+/g, " ") // Collapse spaces
+        .trim();
+
+    if (cleanFilename.length > 3) {
+        dynamicTags.push(cleanFilename);
+    }
+
+    // 2. Content Title Tag (Heuristic)
+    const contentTitle = extractTitleFromContent(content);
+    if (contentTitle && !dynamicTags.includes(contentTitle)) {
+        dynamicTags.push(contentTitle);
+    }
+
+    // Weights: Content match = 1, Filename match = 2
     let bestMatch: DetectedDocType = {
         type: 'Unknown',
         category: 'Uncategorized',
         confidence: 0,
-        tags: []
+        tags: dynamicTags // Start with dynamic tags
     };
 
     for (const docType of DOCUMENT_TYPES) {
@@ -243,7 +283,7 @@ const detectType = (content: string, filename: string): DetectedDocType => {
                 type: docType.type,
                 category: docType.category,
                 confidence: score,
-                tags: [docType.category, detectedLang.toUpperCase()],
+                tags: [...new Set([...dynamicTags, docType.category, detectedLang.toUpperCase()])],
                 language: detectedLang
             };
         }
@@ -252,14 +292,9 @@ const detectType = (content: string, filename: string): DetectedDocType => {
     // Normalize confidence (cap at 100)
     bestMatch.confidence = Math.min(bestMatch.confidence, 100);
 
-    // If very low confidence, remain unknown
-    if (bestMatch.confidence < 10) {
-        return {
-            type: 'Unknown',
-            category: 'Uncategorized',
-            confidence: 0,
-            tags: []
-        }
+    // If we have a decent filename/title tag, we can consider it "partially detected" even if category is unknown
+    if (bestMatch.type === 'Unknown' && dynamicTags.length > 0) {
+        bestMatch.confidence = 10; // Low confidence but not zero
     }
 
     return bestMatch;

@@ -56,7 +56,13 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
         }
     }, []);
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { 'application/pdf': ['.pdf'], 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] } });
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: {
+            'application/pdf': ['.pdf'],
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+        }
+    });
 
     const handleSaveAll = async () => {
         setIsProcessing(true);
@@ -119,6 +125,34 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
         <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
     );
 
+    const handleAddTag = (fileId: string, tag: string) => {
+        if (!tag.trim()) return;
+        setScannedFiles(prev => prev.map(f => {
+            if (f.id === fileId && f.detected) {
+                const currentTags = f.detected.tags || [];
+                if (!currentTags.includes(tag.trim())) {
+                    return { ...f, detected: { ...f.detected, tags: [...currentTags, tag.trim()] } };
+                }
+            }
+            return f;
+        }));
+    };
+
+    const handleRemoveTag = (fileId: string, tagToRemove: string) => {
+        setScannedFiles(prev => prev.map(f => {
+            if (f.id === fileId && f.detected) {
+                return {
+                    ...f,
+                    detected: {
+                        ...f.detected,
+                        tags: f.detected.tags.filter(t => t !== tagToRemove)
+                    }
+                };
+            }
+            return f;
+        }));
+    };
+
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -170,17 +204,34 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
                                             <p className="text-sm font-medium text-slate-500 animate-pulse">Analyzing content...</p>
                                         ) : (
                                             <>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${file.detected?.confidence && file.detected.confidence > 50 ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-600'}`}>
-                                                        {file.detected?.type || 'Unknown'}
-                                                    </span>
-                                                    {file.detected?.language && (
-                                                        <span className="text-xs px-1.5 py-0.5 border border-slate-200 rounded text-slate-500 uppercase">
-                                                            {file.detected.language}
+                                                <h4 className="font-semibold text-slate-800 truncate text-sm mb-1" title={file.file.name}>{file.title}</h4>
+
+                                                {/* Tags Input Area */}
+                                                <div className="flex flex-wrap gap-1 mb-2">
+                                                    {(file.detected?.tags || []).map((tag, idx) => (
+                                                        <span key={idx} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                                            {tag}
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleRemoveTag(file.id, tag); }}
+                                                                className="hover:text-red-500"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
                                                         </span>
-                                                    )}
+                                                    ))}
+                                                    <input
+                                                        type="text"
+                                                        placeholder="+ Tag"
+                                                        className="text-[10px] px-1.5 py-0.5 rounded bg-transparent border border-dashed border-slate-300 w-16 focus:w-24 focus:outline-none focus:border-teal-400 transition-all placeholder:text-slate-400"
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                handleAddTag(file.id, e.currentTarget.value);
+                                                                e.currentTarget.value = '';
+                                                            }
+                                                        }}
+                                                    />
                                                 </div>
-                                                <h4 className="font-semibold text-slate-800 truncate text-sm" title={file.file.name}>{file.title}</h4>
+
                                                 <p className="text-xs text-slate-400 mt-0.5 truncate">{file.file.name}</p>
                                             </>
                                         )}
