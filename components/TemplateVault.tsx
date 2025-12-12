@@ -200,6 +200,33 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
         }
     };
 
+    const handleDownload = async (filePath: string, originalName: string) => {
+        try {
+            const { data, error } = await supabase.storage
+                .from('templates')
+                .createSignedUrl(filePath, 60); // Valid for 60 seconds
+
+            if (error) throw error;
+            if (data?.signedUrl) {
+                window.open(data.signedUrl, '_blank');
+            }
+        } catch (err) {
+            console.error('Download failed:', err);
+            alert('Failed to download file');
+        }
+    };
+
+    const filteredTemplates = savedTemplates.filter(t => {
+        if (!filter) return true;
+        const search = filter.toLowerCase();
+        return (
+            t.title.toLowerCase().includes(search) ||
+            t.original_filename.toLowerCase().includes(search) ||
+            t.detected_type.toLowerCase().includes(search) ||
+            (t.tags || []).some((tag: string) => tag.toLowerCase().includes(search))
+        );
+    });
+
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -305,37 +332,64 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
 
             {/* SAVED TEMPLATES SECTION */}
             <div className="border-t border-slate-200 pt-8">
-                <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-teal-600" />
-                    Vault Archive ({savedTemplates.length})
-                </h3>
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Shield className="w-5 h-5 text-teal-600" />
+                        Vault Archive ({savedTemplates.length})
+                    </h3>
+                    <div className="relative">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                            type="text"
+                            placeholder="Search by title, tag, or type..."
+                            value={filter}
+                            onChange={(e) => setFilter(e.target.value)}
+                            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 w-64 transition-all focus:w-80"
+                        />
+                    </div>
+                </div>
 
-                {savedTemplates.length === 0 ? (
+                {filteredTemplates.length === 0 ? (
                     <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
                         <Search className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                        <p className="text-slate-500">Your vault is empty. Upload documents to archive them safely.</p>
+                        <p className="text-slate-500">
+                            {filter ? 'No documents match your search.' : 'Your vault is empty. Upload documents to archive them safely.'}
+                        </p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {savedTemplates.map((template) => (
+                        {filteredTemplates.map((template) => (
                             <div key={template.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group relative">
-                                <button onClick={() => deleteTemplate(template.id, template.file_path)} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                    <X className="w-4 h-4" />
-                                </button>
+                                <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm bg-white rounded-lg p-0.5 border border-slate-100">
+                                    <button
+                                        onClick={() => handleDownload(template.file_path, template.original_filename)}
+                                        className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded"
+                                        title="Download"
+                                    >
+                                        <Upload className="w-4 h-4 rotate-180" />
+                                    </button>
+                                    <button
+                                        onClick={() => deleteTemplate(template.id, template.file_path)}
+                                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                        title="Delete"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
 
                                 <div className="flex items-start gap-3">
-                                    <div className="p-2 bg-slate-50 rounded-lg">
+                                    <div className="p-2 bg-slate-50 rounded-lg group-hover:bg-teal-50 transition-colors">
                                         {getIconForType(template.detected_type)}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600">
+                                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600 group-hover:bg-white transition-colors">
                                                 {template.detected_type}
                                             </span>
                                         </div>
-                                        <h4 className="font-semibold text-slate-800 truncate text-sm mb-1" title={template.title}>{template.title}</h4>
+                                        <h4 className="font-semibold text-slate-800 truncate text-sm mb-1 group-hover:text-teal-700 transition-colors" title={template.title}>{template.title}</h4>
 
-                                        <div className="flex flex-wrap gap-1 mb-2">
+                                        <div className="flex flex-wrap gap-1 mb-2 h-6 overflow-hidden">
                                             {(template.tags || []).slice(0, 3).map((tag: string, idx: number) => (
                                                 <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-100 truncate max-w-[80px]">
                                                     {tag}
