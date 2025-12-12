@@ -2,11 +2,8 @@ import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure PDF.js worker
-// In a Vite environment, we might need a specific worker configuration.
-// For now, we'll try to use the CDN worker or let the bundler handle it if possible.
-// Common issue with pdfjs in Vite: worker needs to be explicit or copied.
-// Let's rely on standard import if possible, or fallback to CDN.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min?url';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 
 export interface DetectedDocType {
