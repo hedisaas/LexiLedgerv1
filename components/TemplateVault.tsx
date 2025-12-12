@@ -202,9 +202,17 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
 
     const handleDownload = async (filePath: string, originalName: string) => {
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("User not authenticated");
+
+            // Construct full path: userId/filename
+            // Note: If filePath already contains userId (future proofing), this might need logic, 
+            // but currently we know we only stored the filename.
+            const fullPath = `${user.id}/${filePath}`;
+
             const { data, error } = await supabase.storage
                 .from('templates')
-                .createSignedUrl(filePath, 60); // Valid for 60 seconds
+                .createSignedUrl(fullPath, 60); // Valid for 60 seconds
 
             if (error) throw error;
             if (data?.signedUrl) {
