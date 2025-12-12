@@ -125,12 +125,12 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, jobs, profile, 
 
          <div className="max-w-5xl mx-auto p-8">
             {/* Welcome Header */}
-            <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 text-white shadow-xl mb-8 flex justify-between items-end">
+            <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 text-white shadow-xl mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-0">
                <div>
                   <h2 className="text-3xl font-bold mb-2">{t.welcomeClient}, {clientName}!</h2>
                   <p className="text-slate-300">{t.clientPortalDesc}</p>
                </div>
-               <div className="text-right bg-white/10 p-4 rounded-xl backdrop-blur-sm">
+               <div className="text-left md:text-right bg-white/10 p-4 rounded-xl backdrop-blur-sm w-full md:w-auto">
                   <p className="text-xs text-slate-300 uppercase font-bold tracking-wider">Translator Contact</p>
                   <p className="font-medium text-lg">{profile.translatorName}</p>
                   <p className="text-sm text-slate-300">{profile.phone}</p>

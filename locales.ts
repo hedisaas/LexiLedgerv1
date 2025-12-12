@@ -163,6 +163,23 @@ export const translations = {
     syncing: "Syncing...",
     synced: "Synced to Cloud",
     confirmMarkAsCompleted: "Invoice generated successfully. Do you want to mark this job as 'Completed'?",
+
+    // Template Vault
+    vaultTitle: "Template Vault",
+    vaultSubtitle: "Smart archive for your past translations. Upload bulk files and let AI sort them.",
+    dragDrop: "Drag & Drop your template folder here",
+    supports: "Supports .docx and .pdf (bulk upload supported)",
+    reviewImport: "Review & Import",
+    clearAll: "Clear All",
+    importAll: "Import All to Vault",
+    importing: "Importing...",
+    vaultArchive: "Vault Archive",
+    searchVault: "Search by title, tag, or type...",
+    emptyVault: "Your vault is empty. Upload documents to archive them safely.",
+    noResults: "No documents match your search.",
+    analyzing: "Analyzing content...",
+    uploadFailed: "Upload Failed",
+    imported: "Imported",
   },
   fr: {
     // Sidebar
@@ -269,7 +286,7 @@ export const translations = {
     landscape: "Paysage",
     tools: "Outils TAO",
     tmMatches: "Correspondances TM",
-    glossary: "Glossaire",
+    glossary: "Glossary",
     noMatches: "Aucune correspondance.",
 
     // Forms
@@ -325,5 +342,22 @@ export const translations = {
     syncing: "Synchro...",
     synced: "Synchronisé",
     confirmMarkAsCompleted: "Facture générée avec succès. Voulez-vous marquer ce dossier comme 'Terminé' ?",
+
+    // Template Vault
+    vaultTitle: "Coffre-fort de modèles",
+    vaultSubtitle: "Archives intelligentes pour vos anciennes traductions. Chargez en masse et l'IA trie tout.",
+    dragDrop: "Glissez-déposez votre dossier de modèles ici",
+    supports: "Supporte .docx et .pdf (chargement en masse supporté)",
+    reviewImport: "Vérifier & Importer",
+    clearAll: "Tout effacer",
+    importAll: "Importer tout",
+    importing: "Importation...",
+    vaultArchive: "Archives du Coffre",
+    searchVault: "Rechercher par titre, tag ou type...",
+    emptyVault: "Votre coffre est vide. Chargez des documents pour les archiver.",
+    noResults: "Aucun document ne correspond à votre recherche.",
+    analyzing: "Analyse du contenu...",
+    uploadFailed: "Échec chargement",
+    imported: "Importé",
   }
 };

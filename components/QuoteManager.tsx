@@ -145,7 +145,7 @@ const QuoteManager: React.FC<QuoteManagerProps> = ({ quotes, onAddQuote, onUpdat
                 <div className="flex items-center gap-3">
                   {req.file_path && (
                     <a
-                      href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${req.file_path}`}
+                      href={`${(import.meta as any).env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${req.file_path}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center gap-1"

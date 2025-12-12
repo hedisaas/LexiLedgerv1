@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, Check, X, Shield, RefreshCw, Layers, Search, GraduationCap, Car, Scale, Landmark } from 'lucide-react';
 import { parseFileContent, DetectedDocType } from '../utils/documentParser';
 import { supabase } from '../lib/supabase';
-import { Lang } from '../locales';
+import { Lang, translations } from '../locales';
 
 interface TemplateVaultProps {
     lang: Lang;
@@ -18,6 +18,7 @@ interface ScannedFile {
 }
 
 const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
+    const t = translations[lang]; // Shortcut for current language
     const [scannedFiles, setScannedFiles] = useState<ScannedFile[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [filter, setFilter] = useState('');
@@ -239,8 +240,8 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
         <div className="p-8 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-800">Template Vault</h1>
-                    <p className="text-slate-500 mt-2">Smart archive for your past translations. Upload bulk files and let AI sort them.</p>
+                    <h1 className="text-3xl font-bold text-slate-800">{t.vaultTitle}</h1>
+                    <p className="text-slate-500 mt-2">{t.vaultSubtitle}</p>
                 </div>
             </div>
 
@@ -248,24 +249,24 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
             <div {...getRootProps()} className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer mb-12 ${isDragActive ? 'border-teal-500 bg-teal-50' : 'border-slate-300 hover:border-teal-400 hover:bg-slate-50'}`}>
                 <input {...getInputProps()} />
                 <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragActive ? 'text-teal-600' : 'text-slate-400'}`} />
-                <p className="text-lg font-medium text-slate-700">Drag & Drop your template folder here</p>
-                <p className="text-slate-500">Supports .docx and .pdf (bulk upload supported)</p>
+                <p className="text-lg font-medium text-slate-700">{t.dragDrop}</p>
+                <p className="text-slate-500">{t.supports}</p>
             </div>
 
             {/* Processing / Review Area */}
             {scannedFiles.length > 0 && (
                 <div className="mb-12">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xl font-bold text-slate-800">Review & Import ({scannedFiles.length})</h3>
+                        <h3 className="text-xl font-bold text-slate-800">{t.reviewImport} ({scannedFiles.length})</h3>
                         <div className="flex gap-2">
-                            <button onClick={() => setScannedFiles([])} className="px-4 py-2 text-slate-500 hover:text-red-500 text-sm font-medium">Clear All</button>
+                            <button onClick={() => setScannedFiles([])} className="px-4 py-2 text-slate-500 hover:text-red-500 text-sm font-medium">{t.clearAll}</button>
                             <button
                                 onClick={handleSaveAll}
                                 disabled={isProcessing || scannedFiles.every(f => f.status === 'complete')}
                                 className="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 disabled:opacity-50 flex items-center gap-2"
                             >
                                 {isProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
-                                {isProcessing ? 'Importing...' : 'Import All to Vault'}
+                                {isProcessing ? t.importing : t.importAll}
                             </button>
                         </div>
                     </div>
@@ -283,7 +284,7 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         {file.status === 'scanning' ? (
-                                            <p className="text-sm font-medium text-slate-500 animate-pulse">Analyzing content...</p>
+                                            <p className="text-sm font-medium text-slate-500 animate-pulse">{t.analyzing}</p>
                                         ) : (
                                             <>
                                                 <h4 className="font-semibold text-slate-800 truncate text-sm mb-1" title={file.file.name}>{file.title}</h4>
@@ -323,13 +324,13 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
                                 {file.status === 'complete' && (
                                     <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px] flex items-center justify-center rounded-xl">
                                         <div className="flex items-center gap-1 text-teal-600 font-bold">
-                                            <Check className="w-5 h-5" /> Imported
+                                            <Check className="w-5 h-5" /> {t.imported}
                                         </div>
                                     </div>
                                 )}
                                 {file.status === 'error' && (
                                     <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px] flex items-center justify-center rounded-xl">
-                                        <span className="text-red-500 font-bold text-sm">Upload Failed</span>
+                                        <span className="text-red-500 font-bold text-sm">{t.uploadFailed}</span>
                                     </div>
                                 )}
                             </div>
@@ -343,13 +344,13 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <Shield className="w-5 h-5 text-teal-600" />
-                        Vault Archive ({savedTemplates.length})
+                        {t.vaultArchive} ({savedTemplates.length})
                     </h3>
                     <div className="relative">
                         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
                             type="text"
-                            placeholder="Search by title, tag, or type..."
+                            placeholder={t.searchVault}
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                             className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500 w-64 transition-all focus:w-80"
@@ -361,7 +362,7 @@ const TemplateVault: React.FC<TemplateVaultProps> = ({ lang }) => {
                     <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
                         <Search className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                         <p className="text-slate-500">
-                            {filter ? 'No documents match your search.' : 'Your vault is empty. Upload documents to archive them safely.'}
+                            {filter ? t.noResults : t.emptyVault}
                         </p>
                     </div>
                 ) : (

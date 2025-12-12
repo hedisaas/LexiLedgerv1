@@ -195,7 +195,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
             faq7A: "Oui ! Nous offrons un support client complet par e-mail, chat en direct et documentation détaillée. Notre équipe répond dans les 24 heures, et nous fournissons une assistance à l'intégration pour vous aider à démarrer rapidement.",
             faq8Q: "Que se passe-t-il si je dois annuler mon abonnement ?",
             faq8A: "Vous pouvez annuler à tout moment sans pénalités ni frais cachés. Vos données restent accessibles pendant 30 jours après l'annulation, vous donnant le temps de tout exporter. Nous offrons également un remboursement complet dans les 14 premiers jours si vous n'êtes pas satisfait.",
-            footerRights: "© 2025 LexiLedger. Conçu avec précision."
+            footerRights: "© 2025 LexiLedger. Crafted with precision."
         }
     };
 
@@ -264,19 +264,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
 
             {/* Navbar */}
             <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                <div className="max-w-7xl mx-auto px-6 h-20 flex flex-wrap md:flex-nowrap items-center justify-between gap-4">
                     <Logo />
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
                         <a href="#features" className="hover:text-teal-600 transition-colors">{text.features}</a>
                         <a href="#pricing" className="hover:text-teal-600 transition-colors">{text.pricing}</a>
                         <a href="#about" className="hover:text-teal-600 transition-colors">{text.about}</a>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <button onClick={toggleLang} className="text-slate-600 font-medium hover:text-teal-600 flex items-center gap-1">
+                    <div className="flex items-center gap-2 md:gap-4 ml-auto md:ml-0">
+                        <button onClick={toggleLang} className="text-slate-600 font-medium hover:text-teal-600 flex items-center gap-1 text-sm">
                             <Globe className="w-4 h-4" /> {lang.toUpperCase()}
                         </button>
-                        <button onClick={onGetStarted} className="text-slate-600 font-medium hover:text-teal-600">{text.login}</button>
-                        <button onClick={onGetStarted} className="px-5 py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-all hover:shadow-lg hover:-translate-y-0.5">
+                        <button onClick={onGetStarted} className="hidden sm:block text-slate-600 font-medium hover:text-teal-600 text-sm">{text.login}</button>
+                        <button onClick={onGetStarted} className="px-3 py-1.5 md:px-5 md:py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-all hover:shadow-lg hover:-translate-y-0.5 text-xs md:text-sm">
                             {text.startTrial}
                         </button>
                     </div>
@@ -369,7 +369,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
             </section>
 
             {/* Feature Showcase - Live Preview */}
-            <section className="py-24 px-6 bg-teal-950 overflow-hidden relative">
+            <section className="py-24 px-4 sm:px-6 bg-teal-950 overflow-hidden relative">
                 {/* Background decorative elements */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
                     <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-teal-500/30 rounded-full blur-3xl mix-blend-screen" />
@@ -388,8 +388,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, lang, toggleLan
                     </p>
                 </div>
 
-                <div className="relative z-10">
-                    <FeatureShowcase lang={lang} />
+                <div className="relative z-10 overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible custom-scrollbar">
+                    {/* Added min-width to ensure the "browser" look doesn't get crushed on very small screens, allowing scroll instead. */}
+                    <div className="min-w-[600px] md:min-w-0">
+                        <FeatureShowcase lang={lang} />
+                    </div>
                 </div>
             </section>
 
