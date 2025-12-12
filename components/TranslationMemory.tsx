@@ -193,79 +193,78 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
   );
 
   return (
-    <div className="max-w-6xl">
-      <div className="mb-6 flex justify-between items-end">
+    <div className="w-full max-w-6xl mx-auto block">
+      {/* Header */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Translation Resources</h2>
-            <p className="text-slate-600">Manage your templates, translation memory, and glossary</p>
-          </div>
-          <div className="flex gap-2">
-            <input type="file" ref={fileInputRef} onChange={handleImportTMX} accept=".tmx,.xml" className="hidden" />
-            <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
-              <Upload className="w-4 h-4" /> Import TMX
-            </button>
-            <button onClick={handleExportTMX} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
-              <Download className="w-4 h-4" /> Export TMX
-            </button>
-          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Translation Resources</h2>
+          <p className="text-slate-600">Manage your templates, translation memory, and glossary</p>
         </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-slate-200 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('vault')}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${activeTab === 'vault'
-              ? 'text-primary-600 border-b-2 border-primary-600'
-              : 'text-slate-600 hover:text-slate-900'
-              }`}
-          >
-            <Database className="w-4 h-4 inline mr-2" />
-            Template Vault
+        <div className="flex gap-2">
+          <input type="file" ref={fileInputRef} onChange={handleImportTMX} accept=".tmx,.xml" className="hidden" />
+          <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+            <Upload className="w-4 h-4" /> Import TMX
           </button>
-          <button
-            onClick={() => setActiveTab('tm')}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${activeTab === 'tm'
-              ? 'text-primary-600 border-b-2 border-primary-600'
-              : 'text-slate-600 hover:text-slate-900'
-              }`}
-          >
-            <Database className="w-4 h-4 inline mr-2" />
-            Translation Memory
-          </button>
-          <button
-            onClick={() => setActiveTab('glossary')}
-            className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${activeTab === 'glossary'
-              ? 'text-primary-600 border-b-2 border-primary-600'
-              : 'text-slate-600 hover:text-slate-900'
-              }`}
-          >
-            <Search className="w-4 h-4 inline mr-2" />
-            Glossary
+          <button onClick={handleExportTMX} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+            <Download className="w-4 h-4" /> Export TMX
           </button>
         </div>
+      </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-slate-200 overflow-x-auto pb-1">
+        <button
+          onClick={() => setActiveTab('vault')}
+          className={`px-4 py-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'vault'
+            ? 'text-primary-600 border-b-2 border-primary-600'
+            : 'text-slate-600 hover:text-slate-900'
+            }`}
+        >
+          <Database className="w-4 h-4" />
+          Template Vault
+        </button>
+        <button
+          onClick={() => setActiveTab('tm')}
+          className={`px-4 py-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'tm'
+            ? 'text-primary-600 border-b-2 border-primary-600'
+            : 'text-slate-600 hover:text-slate-900'
+            }`}
+        >
+          <Database className="w-4 h-4" />
+          Translation Memory
+        </button>
+        <button
+          onClick={() => setActiveTab('glossary')}
+          className={`px-4 py-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'glossary'
+            ? 'text-primary-600 border-b-2 border-primary-600'
+            : 'text-slate-600 hover:text-slate-900'
+            }`}
+        >
+          <Search className="w-4 h-4" />
+          Glossary
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="w-full">
         {activeTab === 'vault' ? (
           <TemplateVault lang={lang} />
         ) : (
-          <>
-
+          <div className="space-y-4">
             {/* Search */}
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder={`Search ${activeTab === 'tm' ? 'translations' : 'terms'}...`}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder={`Search ${activeTab === 'tm' ? 'translations' : 'terms'}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
             </div>
 
             {/* Add New Entry */}
-            <div className="bg-white rounded-lg border border-slate-200 p-4 mb-4">
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
               <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 Add New {activeTab === 'tm' ? 'Translation' : 'Term'}
@@ -411,7 +410,7 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
             </div>
 
             {/* Stats */}
-            <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
                 <div className="text-3xl font-bold text-primary-600">{tmUnits.length}</div>
                 <div className="text-sm text-primary-700">TM Units</div>
@@ -421,7 +420,7 @@ export const TranslationMemory: React.FC<TranslationMemoryProps> = ({ lang }) =>
                 <div className="text-sm text-purple-700">Glossary Terms</div>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
