@@ -21,6 +21,7 @@ export const translations = {
     accessCode: "Access Code",
     password: "Password",
     signIn: "Sign In",
+    loggedAs: "Logged as",
     errorCredentials: "Invalid credentials",
     staffLogin: "Staff Login",
     adminRole: "Admin",
@@ -65,7 +66,7 @@ export const translations = {
     baseHT: "Base (HT)",
     collectedVAT: "Collected VAT (19%)",
     stamps: "Stamps",
-    totalTTC: "Total (TTC)",
+
 
     // Translations
     newTranslation: "New Translation",
@@ -142,6 +143,13 @@ export const translations = {
     recentExpenses: "Recent Expenses",
     category: "Category",
     description: "Description",
+    descPlaceholder: "Rent, Paper, Ink...",
+    cat_rent: "Rent (Fixed)",
+    cat_subscription: "Software/Subscriptions",
+    cat_bills: "Utility Bills",
+    cat_office: "Office Supplies",
+    cat_tax: "Taxes",
+    cat_other: "Other",
     noExpenses: "No expenses recorded yet.",
 
     // Settings
@@ -250,6 +258,7 @@ export const translations = {
     accessCode: "Code d'accès",
     password: "Mot de passe",
     signIn: "Se connecter",
+    loggedAs: "Connecté en tant que",
     errorCredentials: "Identifiants invalides",
     staffLogin: "Accès Staff",
     adminRole: "Admin",
@@ -294,7 +303,7 @@ export const translations = {
     baseHT: "Base (HT)",
     collectedVAT: "TVA Collectée (19%)",
     stamps: "Timbres",
-    totalTTC: "Total (TTC)",
+
 
     // Translations
     newTranslation: "Nouvelle Traduction",
@@ -371,6 +380,13 @@ export const translations = {
     recentExpenses: "Dépenses Récentes",
     category: "Catégorie",
     description: "Description",
+    descPlaceholder: "Loyer, Papier, Encre...",
+    cat_rent: "Loyer (Fixe)",
+    cat_subscription: "Logiciels/Abonnements",
+    cat_bills: "Factures (Eau/Élect.)",
+    cat_office: "Fournitures de Bureau",
+    cat_tax: "Taxes & Impôts",
+    cat_other: "Autre",
     noExpenses: "Aucune dépense enregistrée.",
 
     // Settings

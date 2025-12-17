@@ -13,6 +13,20 @@ interface ExpenseManagerProps {
 
 const ExpenseManager: React.FC<ExpenseManagerProps> = ({ expenses, onAddExpense, onDeleteExpense, lang }) => {
   const t = translations[lang];
+
+  // Helper to translate categories
+  const getCategoryLabel = (cat: ExpenseCategory) => {
+    const map: Record<string, string> = {
+      [ExpenseCategory.FIXED_RENT]: t.cat_rent,
+      [ExpenseCategory.FIXED_SUBSCRIPTION]: t.cat_subscription,
+      [ExpenseCategory.VARIABLE_BILLS]: t.cat_bills,
+      [ExpenseCategory.VARIABLE_OFFICE]: t.cat_office,
+      [ExpenseCategory.VARIABLE_TAX]: t.cat_tax,
+      [ExpenseCategory.OTHER]: t.cat_other,
+    };
+    return map[cat] || cat;
+  };
+
   const [newExpense, setNewExpense] = useState<Partial<Expense>>({
     date: new Date().toISOString().split('T')[0],
     category: ExpenseCategory.OTHER,
@@ -62,12 +76,12 @@ const ExpenseManager: React.FC<ExpenseManagerProps> = ({ expenses, onAddExpense,
             <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t.category}</label>
             <select className={inputClass}
               value={newExpense.category} onChange={e => setNewExpense({ ...newExpense, category: e.target.value as ExpenseCategory })}>
-              {Object.values(ExpenseCategory).map(c => <option key={c} value={c}>{c}</option>)}
+              {Object.values(ExpenseCategory).map(c => <option key={c} value={c}>{getCategoryLabel(c)}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t.description}</label>
-            <input type="text" required placeholder="Rent, Paper, Ink..." className={inputClass}
+            <input type="text" required placeholder={t.descPlaceholder} className={inputClass}
               value={newExpense.description} onChange={e => setNewExpense({ ...newExpense, description: e.target.value })} />
           </div>
           <div>
@@ -107,7 +121,7 @@ const ExpenseManager: React.FC<ExpenseManagerProps> = ({ expenses, onAddExpense,
                   <td className="px-4 py-3 font-medium text-slate-800">{exp.description}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">
-                      <Tag className="w-3 h-3" /> {exp.category.split('(')[0]}
+                      <Tag className="w-3 h-3" /> {getCategoryLabel(exp.category).split('(')[0]}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-rose-600">{exp.amount.toFixed(3)} TND</td>
