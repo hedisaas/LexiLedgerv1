@@ -64,7 +64,10 @@ export const useTranslationJobs = (user: User | null, secretary: Secretary | nul
         attachments: job.attachments,
         translatedText: job.translated_text,
         templateId: job.template_id,
-        finalDocument: job.final_document
+        translatedText: job.translated_text,
+        templateId: job.template_id,
+        finalDocument: job.final_document,
+        finalDocuments: job.final_documents || []
       }));
 
       setJobs(mappedJobs);
@@ -110,7 +113,10 @@ export const useTranslationJobs = (user: User | null, secretary: Secretary | nul
             attachments: job.attachments,
             translated_text: job.translatedText,
             template_id: job.templateId,
-            final_document: job.finalDocument
+            translated_text: job.translatedText,
+            template_id: job.templateId,
+            final_document: job.finalDocument,
+            final_documents: job.finalDocuments
           }])
           .select()
           .single();
@@ -161,7 +167,8 @@ export const useTranslationJobs = (user: User | null, secretary: Secretary | nul
             attachments: job.attachments,
             translated_text: job.translatedText,
             template_id: job.templateId,
-            final_document: job.finalDocument
+            final_document: job.finalDocument,
+            final_documents: job.finalDocuments
           })
           .eq('id', job.id);
         error = dbError;

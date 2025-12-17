@@ -54,28 +54,28 @@ const ExpenseManager: React.FC<ExpenseManagerProps> = ({ expenses, onAddExpense,
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Date</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t.date}</label>
             <input type="date" required className={inputClass}
-              value={newExpense.date} onChange={e => setNewExpense({...newExpense, date: e.target.value})} />
+              value={newExpense.date} onChange={e => setNewExpense({ ...newExpense, date: e.target.value })} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t.category}</label>
             <select className={inputClass}
-              value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value as ExpenseCategory})}>
+              value={newExpense.category} onChange={e => setNewExpense({ ...newExpense, category: e.target.value as ExpenseCategory })}>
               {Object.values(ExpenseCategory).map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t.description}</label>
             <input type="text" required placeholder="Rent, Paper, Ink..." className={inputClass}
-              value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} />
+              value={newExpense.description} onChange={e => setNewExpense({ ...newExpense, description: e.target.value })} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t.amount} (TND)</label>
             <div className="relative">
               <span className="absolute left-3 top-2 text-slate-500 text-xs font-bold">TND</span>
               <input type="number" required min="0" step="0.001" className={`${inputClass} pl-10`}
-                value={newExpense.amount} onChange={e => setNewExpense({...newExpense, amount: parseFloat(e.target.value)})} />
+                value={newExpense.amount} onChange={e => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) })} />
             </div>
           </div>
           <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg font-medium text-sm transition-all shadow-lg shadow-slate-900/10">
@@ -93,7 +93,7 @@ const ExpenseManager: React.FC<ExpenseManagerProps> = ({ expenses, onAddExpense,
           <table className="w-full text-left text-sm">
             <thead className="bg-white sticky top-0 z-10">
               <tr className="text-slate-500 border-b border-slate-100">
-                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">{t.date}</th>
                 <th className="px-4 py-3 font-medium">{t.description}</th>
                 <th className="px-4 py-3 font-medium">{t.category}</th>
                 <th className="px-4 py-3 font-medium text-right">{t.amount}</th>
@@ -101,7 +101,7 @@ const ExpenseManager: React.FC<ExpenseManagerProps> = ({ expenses, onAddExpense,
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {expenses.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(exp => (
+              {expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(exp => (
                 <tr key={exp.id} className="hover:bg-slate-50 group">
                   <td className="px-4 py-3 text-slate-600">{exp.date}</td>
                   <td className="px-4 py-3 font-medium text-slate-800">{exp.description}</td>

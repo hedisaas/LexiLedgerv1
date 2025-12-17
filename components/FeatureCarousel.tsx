@@ -65,11 +65,42 @@ const FeatureCarousel: React.FC<FeatureCarouselProps> = ({ features }) => {
 
     const maxIndex = Math.max(0, features.length - cardsToShow);
 
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+    // Minimum swipe distance (in px)
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null); // Reset
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            nextSlide();
+        } else if (isRightSwipe) {
+            prevSlide();
+        }
+    };
+
     return (
         <div
             className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10"
             onMouseEnter={() => setIsAutoPlaying(false)}
             onMouseLeave={() => setIsAutoPlaying(true)}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
         >
             <div className="overflow-hidden">
                 <div
@@ -129,5 +160,4 @@ const FeatureCarousel: React.FC<FeatureCarouselProps> = ({ features }) => {
         </div>
     );
 };
-
 export default FeatureCarousel;

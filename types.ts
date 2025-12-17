@@ -38,7 +38,8 @@ export interface TranslationJob {
   attachments?: string[]; // Array of Base64 strings (Images/PDFs)
   translatedText?: string; // The actual content of the translation
   templateId?: string; // Optional: ID of the specific template used
-  finalDocument?: string; // Base64 of the final PDF/Word doc
+  finalDocument?: string; // Base64 or URL (Deprecated in favor of finalDocuments)
+  finalDocuments?: string[]; // Array of URLs for multiple final files
 }
 
 export interface Quote {

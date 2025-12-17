@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { TranslationJob, Language, TranslationStatus } from '../types';
-import { Plus, Search, Printer, Edit2, Trash2, AlertCircle, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Camera, Upload, X, Copy, FileText, Languages, Save, Maximize2, Eye, Download, Code, LayoutTemplate, RotateCw, RotateCcw, RefreshCw, ZoomIn, ZoomOut, Move, ChevronDown, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, FileDown, Book, Database, BookOpen, CheckCircle, FolderOpen, AlignJustify, List as ListIcon, ListOrdered, Highlighter, Type, Palette, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Search, Printer, Edit2, Trash2, AlertCircle, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Camera, Upload, X, Copy, FileText, Languages, Save, Maximize2, Eye, Download, Code, LayoutTemplate, RotateCw, RotateCcw, RefreshCw, ZoomIn, ZoomOut, Move, ChevronDown, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, FileDown, Book, Database, BookOpen, CheckCircle, FolderOpen, AlignJustify, List as ListIcon, ListOrdered, Highlighter, Type, Palette, Sparkles, Loader2, Files } from 'lucide-react';
 import { generateSwornTranslation } from '../services/geminiService';
 import { findGlossaryMatches, findTMMatches } from '../services/tmService';
 import { Lang, translations } from '../locales';
@@ -56,7 +56,35 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
 
   // Preview Modal State
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewState, setPreviewState] = useState<{ files: string[]; index: number; titlePrefix?: string } | null>(null);
+  const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false);
+  const downloadFile = async (url: string, filename?: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      const suggestedName = filename || url.split('/').pop()?.split('?')[0] || 'download';
+      link.download = suggestedName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Download failed:", err);
+      // Fallback
+      window.open(url, '_blank');
+    }
+  };
+
+  const openPreview = (files: string[] | string, index: number = 0, titlePrefix?: string) => {
+    const fileList = Array.isArray(files) ? files : [files];
+    if (fileList.length > 0) {
+      setPreviewState({ files: fileList, index, titlePrefix });
+    }
+  };
 
   // Calendar State
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -82,8 +110,10 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     priceTotal: 0,
     dueDate: '',
     attachments: [],
-    translatedText: ''
+    translatedText: '',
+    finalDocuments: []
   });
+  const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -157,9 +187,49 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     }));
   };
 
+  const validateForm = () => {
+    const errors: Record<string, boolean> = {};
+    console.log("DEBUG: Validation running. Current formData:", formData);
+
+    if (!formData.date) {
+      console.log("DEBUG: Date missing!");
+      errors.date = true;
+    }
+    // Make Due Date mandatory as requested
+    if (!formData.dueDate) {
+      errors.dueDate = true;
+    }
+
+    if (!formData.clientName?.trim()) errors.clientName = true;
+    if (!formData.documentType?.trim()) errors.documentType = true;
+    if (!formData.sourceLang) errors.sourceLang = true;
+    if (!formData.targetLang) errors.targetLang = true;
+
+    console.log("DEBUG: Validation errors found:", errors);
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const jobId = editingJob ? editingJob.id : crypto.randomUUID();
+    console.log("DEBUG: handleSubmit called");
+
+    if (!validateForm()) {
+      console.log("DEBUG: Validation failed. Stopping submission.");
+      return;
+    }
+    console.log("DEBUG: Validation passed. Proceeding...");
+
+    // Clean up dates for Supabase (empty string -> null)
+    const payload = {
+      ...formData,
+      dueDate: formData.dueDate ? formData.dueDate : null,
+      // Ensure creation date is valid or default (though validation checks it)
+      date: formData.date || new Date().toISOString().split('T')[0]
+    };
+
+    // Use existing ID if we generated one during inline upload or editing
+    const jobId = editingJob ? editingJob.id : (formData.id || crypto.randomUUID());
 
     // Upload pending files if any
     let finalAttachments = [...(formData.attachments || [])];
@@ -174,13 +244,14 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
 
     if (filesToUpload.length > 0) {
       try {
-        const uploadPromises = filesToUpload.map(file =>
-          uploadDocument(file, jobId, 'source')
+        const uploadResults = await Promise.all(
+          filesToUpload.map(file => uploadDocument(file, jobId, 'source'))
         );
-        const uploadedUrls = await Promise.all(uploadPromises);
-        // Filter out nulls and add to attachments
-        uploadedUrls.forEach(url => {
-          if (url) finalAttachments.push(url);
+
+        // Filter out errors and add valid URLs
+        uploadResults.forEach(res => {
+          if (res.url) finalAttachments.push(res.url);
+          else console.error("Source upload failed:", res.error);
         });
       } catch (error) {
         console.error("Upload failed", error);
@@ -190,7 +261,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
     }
 
     const jobToSave = {
-      ...formData,
+      ...payload,
       id: jobId,
       attachments: finalAttachments
     } as TranslationJob;
@@ -212,26 +283,37 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
   };
 
   const handleCompletionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0] && pendingCompletionJob) {
-      const file = e.target.files[0];
+    if (e.target.files && e.target.files.length > 0 && pendingCompletionJob) {
+      const files = Array.from(e.target.files);
+      const uploadedUrls: string[] = [];
 
-      try {
-        const uploadedUrl = await uploadDocument(file, pendingCompletionJob.id, 'translation');
+      for (const file of files) {
+        try {
+          const { url, error } = await uploadDocument(file, pendingCompletionJob.id, 'translation');
+          if (url) uploadedUrls.push(url);
+          else console.error(`Failed to upload ${file.name}: ${error}`);
+        } catch (err) { console.error(err); }
+      }
 
-        if (uploadedUrl) {
-          const finalJob = { ...pendingCompletionJob, finalDocument: uploadedUrl };
-          if (editingJob) onUpdateJob(finalJob);
-          else onAddJob(finalJob);
+      if (uploadedUrls.length > 0) {
+        const updatedFinalDocs = [...(pendingCompletionJob.finalDocuments || []), ...uploadedUrls];
+        // Determine single final doc for legacy
+        const legacyFinalDoc = pendingCompletionJob.finalDocument || uploadedUrls[0];
 
-          setIsCompletionModalOpen(false);
-          setPendingCompletionJob(null);
-          closeForm();
-        } else {
-          alert("Failed to upload final document.");
-        }
-      } catch (error) {
-        console.error("Completion upload failed", error);
-        alert("Upload error occurred.");
+        const finalJob = {
+          ...pendingCompletionJob,
+          finalDocuments: updatedFinalDocs,
+          finalDocument: legacyFinalDoc
+        };
+
+        if (editingJob) onUpdateJob(finalJob);
+        else onAddJob(finalJob);
+
+        setIsCompletionModalOpen(false);
+        setPendingCompletionJob(null);
+        closeForm();
+      } else {
+        alert("Failed to upload files. Please try again.");
       }
     }
   };
@@ -255,11 +337,23 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
 
   const handleEdit = (job: TranslationJob) => {
     setEditingJob(job);
-    setFormData(job);
+    setFormData({
+      ...job,
+      attachments: job.attachments || [], // Fallback
+      finalDocuments: (job.finalDocuments && job.finalDocuments.length > 0)
+        ? job.finalDocuments
+        : (job.finalDocument ? [job.finalDocument] : [])
+    });
     setIsFormOpen(true);
   };
 
   const handleStatusChange = (job: TranslationJob, newStatus: TranslationStatus) => {
+    // INTERCEPT COMPLETION CHECKS
+    if (newStatus === TranslationStatus.COMPLETED && !job.finalDocument) {
+      setPendingCompletionJob({ ...job, status: newStatus });
+      setIsCompletionModalOpen(true);
+      return;
+    }
     onUpdateJob({ ...job, status: newStatus });
     setStatusDropdownOpen(null);
   };
@@ -513,7 +607,14 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
                     <td className="px-6 py-4"><div className="font-medium text-slate-900">{job.clientName}</div><div className="text-xs text-slate-400 truncate max-w-[150px]">{job.clientInfo}</div></td>
                     <td className="px-6 py-4 hidden md:table-cell">
                       <div className="flex items-center gap-2 mb-1"><span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-mono">{job.sourceLang} → {job.targetLang}</span></div>
-                      <div className="flex items-center gap-2 text-xs"><span>{job.documentType}</span>{job.attachments?.length ? <button onClick={() => setPreviewImage(job.attachments![0])} className="text-primary-600 hover:text-primary-700 p-1 bg-primary-50 rounded"><Eye className="w-3 h-3" /></button> : null}</div>
+                      <div className="flex items-center gap-2 text-xs"><span>{job.documentType}</span>                      {job.attachments?.length ? (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => openPreview(job.attachments!, 0, `${job.clientName}_${job.documentType}`)} className="text-primary-600 hover:text-primary-700 p-1 bg-primary-50 rounded flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            {job.attachments.length > 1 && <span className="text-[10px] font-bold">{job.attachments.length}</span>}
+                          </button>
+                        </div>
+                      ) : null}</div>
                     </td>
                     <td className="px-6 py-4 text-right font-semibold text-slate-900">{job.priceTotal.toFixed(3)} TND</td>
                     <td className="px-6 py-4 text-center">
@@ -551,9 +652,12 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
-                        {job.finalDocument && (
-                          <button onClick={() => handleDownloadFinal(job)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition" title="Download Final"><FileDown className="w-4 h-4" /></button>
-                        )}
+                        {(job.finalDocuments && job.finalDocuments.length > 0) || job.finalDocument ? (
+                          <button onClick={() => {
+                            const docs = (job.finalDocuments && job.finalDocuments.length > 0) ? job.finalDocuments : [job.finalDocument!];
+                            openPreview(docs, 0, `Final_${job.clientName}_${job.documentType}`);
+                          }} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition" title="View Final Documents"><FileText className="w-4 h-4" /></button>
+                        ) : null}
                         <button onClick={() => openWorkbench(job)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition" title="Open Workbench"><Languages className="w-4 h-4" /></button>
                         <button onClick={() => onPrintInvoice(job)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded transition"><Printer className="w-4 h-4" /></button>
                         <button onClick={() => handleEdit(job)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded transition"><Edit2 className="w-4 h-4" /></button>
@@ -582,7 +686,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
             <h3 className="text-lg font-bold text-slate-900 mb-2">Job Completed!</h3>
             <p className="text-sm text-slate-500 mb-6">Do you want to upload the final translated document now? This allows you to download it later.</p>
 
-            <input type="file" ref={completionFileRef} className="hidden" accept=".pdf,.doc,.docx" onChange={handleCompletionUpload} />
+            <input type="file" multiple ref={completionFileRef} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.jpg,.jpeg,.png,.webp,.heic" onChange={handleCompletionUpload} />
 
             <div className="space-y-3">
               <button onClick={() => completionFileRef.current?.click()} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-medium flex items-center justify-center gap-2">
@@ -605,18 +709,152 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
         </div>
       )}
 
-      {previewImage && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/90 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setPreviewImage(null)}>
-          <div className="relative max-w-4xl max-h-full bg-white rounded-lg overflow-hidden p-2">
-            <img src={previewImage} alt="Preview" className="max-w-full max-h-[85vh] object-contain" />
-            <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 bg-white/90 text-slate-900 p-2 rounded-full hover:bg-white transition shadow-md"><X className="w-5 h-5" /></button>
+      {previewState && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/90 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setPreviewState(null)}>
+          <div className="relative w-full max-w-4xl h-[85vh] bg-white rounded-lg overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* Header / Actions */}
+            <div className="flex justify-between items-center p-3 border-b border-slate-100 bg-slate-50">
+              <div className="flex items-center gap-3 overflow-hidden">
+                <span className="text-sm font-medium text-slate-500 truncate max-w-[200px]">Preview</span>
+                {previewState.files.length > 1 && (
+                  <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold">
+                    {previewState.index + 1} / {previewState.files.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {previewState.files.length > 1 && (
+                  <div className="flex items-center gap-1 mr-2">
+                    <button
+                      onClick={() => setPreviewState(prev => prev ? ({ ...prev, index: (prev.index - 1 + prev.files.length) % prev.files.length }) : null)}
+                      className="p-1.5 hover:bg-slate-200 rounded text-slate-600"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setPreviewState(prev => prev ? ({ ...prev, index: (prev.index + 1) % prev.files.length }) : null)}
+                      className="p-1.5 hover:bg-slate-200 rounded text-slate-600"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="relative">
+                  {previewState.files.length > 1 ? (
+                    <>
+                      <button
+                        onClick={() => setIsDownloadMenuOpen(!isDownloadMenuOpen)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-medium transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" /> Download <ChevronDown className="w-3 h-3" />
+                      </button>
+
+                      {isDownloadMenuOpen && (
+                        <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[180px] z-50 animate-in fade-in zoom-in-95 duration-100">
+                          <button
+                            className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 w-full text-left"
+                            onClick={() => {
+                              setIsDownloadMenuOpen(false);
+                              const fName = previewState.titlePrefix
+                                ? `${previewState.titlePrefix}_${previewState.index + 1}`
+                                : undefined;
+                              downloadFile(previewState.files[previewState.index], fName);
+                            }}
+                          >
+                            <FileText className="w-3.5 h-3.5 text-slate-400" /> Download Current File
+                          </button>
+                          <button
+                            onClick={async () => {
+                              setIsDownloadMenuOpen(false);
+                              // Trigger sequential downloads
+                              for (let i = 0; i < previewState.files.length; i++) {
+                                const fName = previewState.titlePrefix
+                                  ? `${previewState.titlePrefix}_${i + 1}`
+                                  : `file_${i + 1}`;
+                                await downloadFile(previewState.files[i], fName);
+                                await new Promise(r => setTimeout(r, 800)); // Delay to prevent blocking
+                              }
+                            }}
+                            className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 w-full text-left"
+                          >
+                            <Files className="w-3.5 h-3.5 text-slate-400" /> Download All ({previewState.files.length})
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        const fName = previewState.titlePrefix
+                          ? `${previewState.titlePrefix}_${previewState.index + 1}`
+                          : undefined;
+                        downloadFile(previewState.files[previewState.index], fName);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-medium transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Download
+                    </button>
+                  )}
+
+                </div>
+                <button onClick={() => setPreviewState(null)} className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500 transition"><X className="w-5 h-5" /></button>
+              </div>
+            </div>
+
+            {/* Content Preview */}
+            <div className="flex-1 bg-slate-100 overflow-hidden flex items-center justify-center relative group">
+              {/* Overlay Navigation for Mouse Hover */}
+              {previewState.files.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setPreviewState(prev => prev ? ({ ...prev, index: (prev.index - 1 + prev.files.length) % prev.files.length }) : null)}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={() => setPreviewState(prev => prev ? ({ ...prev, index: (prev.index + 1) % prev.files.length }) : null)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </>
+              )}
+
+              {(() => {
+                const currentFile = previewState.files[previewState.index];
+                if (currentFile.endsWith('.pdf') || currentFile.match(/application\/pdf/i)) {
+                  // Append #toolbar=0 to hide native controls for cleaner look
+                  const cleanUrl = currentFile.includes('#') ? currentFile : `${currentFile}#toolbar=0&navpanes=0&scrollbar=0`;
+                  return <iframe src={cleanUrl} className="w-full h-full border-0" title="PDF Preview"></iframe>;
+                }
+                if (currentFile.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) || currentFile.startsWith('data:image') || currentFile.startsWith('blob:')) {
+                  return <img src={currentFile} alt="Preview" className="max-w-full max-h-full object-contain" />;
+                }
+                return (
+                  <div className="text-center p-8">
+                    <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-8 h-8 text-slate-400" />
+                    </div>
+                    <p className="text-slate-900 font-medium mb-1">Preview not available</p>
+                    <p className="text-sm text-slate-500 mb-4">This file type cannot be previewed directly.</p>
+                    <a href={currentFile} download target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition">
+                      <Download className="w-4 h-4" /> Download File
+                    </a>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>
-      )}
+      )
+      }
 
-      {workbenchJob && (
-        <div className="fixed inset-0 z-[80] bg-white flex flex-col animate-in fade-in duration-200">
-          <style>{`
+      {
+        workbenchJob && (
+          <div className="fixed inset-0 z-[80] bg-white flex flex-col animate-in fade-in duration-200">
+            <style>{`
             /* WORD DOCUMENT STYLING - WORD ALIKE */
             .editor-content {
               font-family: "Times New Roman", Times, serif !important;
@@ -658,303 +896,460 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
             }
           `}</style>
 
-          <div className="bg-white px-6 py-3 flex justify-between items-center border-b border-slate-200 shrink-0 shadow-sm z-30">
-            <div>
-              <h2 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Languages className="w-5 h-5 text-primary-600" /> {t.editorWorkbench}</h2>
-              <p className="text-xs text-slate-500">{workbenchJob.clientName} • {workbenchJob.documentType}</p>
+            <div className="bg-white px-6 py-3 flex justify-between items-center border-b border-slate-200 shrink-0 shadow-sm z-30">
+              <div>
+                <h2 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Languages className="w-5 h-5 text-primary-600" /> {t.editorWorkbench}</h2>
+                <p className="text-xs text-slate-500">{workbenchJob.clientName} • {workbenchJob.documentType}</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleMagicDraft}
+                  disabled={isAiTranslating}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {isAiTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  Magic Draft
+                </button>
+                <button onClick={downloadAsWord} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><FileDown className="w-4 h-4" /> {t.downloadDoc}</button>
+                <button onClick={handleWorkbenchSave} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><Save className="w-4 h-4" /> {t.save}</button>
+                <button onClick={closeWorkbench} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors">{t.close}</button>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handleMagicDraft}
-                disabled={isAiTranslating}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
-              >
-                {isAiTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                Magic Draft
-              </button>
-              <button onClick={downloadAsWord} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><FileDown className="w-4 h-4" /> {t.downloadDoc}</button>
-              <button onClick={handleWorkbenchSave} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><Save className="w-4 h-4" /> {t.save}</button>
-              <button onClick={closeWorkbench} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors">{t.close}</button>
-            </div>
-          </div>
 
-          <div className="flex-1 flex overflow-hidden">
-            <div className="w-1/3 lg:w-2/5 bg-slate-100 border-r border-slate-200 flex flex-col relative z-10">
-              <div className="flex-1 flex flex-col">
-                {/* Source Image */}
-                <div className="h-2/3 relative border-b border-slate-200">
-                  <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-white/90 p-1.5 rounded-lg shadow-sm backdrop-blur-sm">
-                    <button onClick={() => setRotation(r => r - 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCcw className="w-4 h-4" /></button>
-                    <button onClick={() => setRotation(r => r + 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCw className="w-4 h-4" /></button>
-                    <div className="w-px h-4 bg-slate-300 mx-1"></div>
-                    <button onClick={() => workbenchJob.attachments && setPreviewImage(workbenchJob.attachments[0])} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Maximize2 className="w-4 h-4" /></button>
+            <div className="flex-1 flex overflow-hidden">
+              <div className="w-1/3 lg:w-2/5 bg-slate-100 border-r border-slate-200 flex flex-col relative z-10">
+                <div className="flex-1 flex flex-col">
+                  {/* Source Image */}
+                  <div className="h-2/3 relative border-b border-slate-200">
+                    <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-white/90 p-1.5 rounded-lg shadow-sm backdrop-blur-sm">
+                      <button onClick={() => setRotation(r => r - 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCcw className="w-4 h-4" /></button>
+                      <button onClick={() => setRotation(r => r + 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCw className="w-4 h-4" /></button>
+                      <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                      <button onClick={() => workbenchJob.attachments && openPreview(workbenchJob.attachments, 0)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Maximize2 className="w-4 h-4" /></button>
+                    </div>
+                    <div className="w-full h-full overflow-hidden flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+                      {workbenchJob.attachments && workbenchJob.attachments.length > 0 ? (
+                        <img src={workbenchJob.attachments[0]} alt="Source" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.3s ease', maxWidth: '100%', maxHeight: '100%' }} className="object-contain shadow-lg rounded-sm bg-white" />
+                      ) : (
+                        <div className="text-center text-slate-400"><FileText className="w-12 h-12 mx-auto mb-2 opacity-50" /><p>No document uploaded.</p></div>
+                      )}
+                    </div>
                   </div>
-                  <div className="w-full h-full overflow-hidden flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
-                    {workbenchJob.attachments && workbenchJob.attachments.length > 0 ? (
-                      <img src={workbenchJob.attachments[0]} alt="Source" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.3s ease', maxWidth: '100%', maxHeight: '100%' }} className="object-contain shadow-lg rounded-sm bg-white" />
-                    ) : (
-                      <div className="text-center text-slate-400"><FileText className="w-12 h-12 mx-auto mb-2 opacity-50" /><p>No document uploaded.</p></div>
-                    )}
+
+                  {/* Translation Tools Panel */}
+                  <div className="flex-1 bg-white flex flex-col">
+                    <div className="p-2 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase text-slate-500 flex items-center gap-2">
+                      <Database className="w-3 h-3" /> {t.tools}
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                      {/* Glossary Matches */}
+                      <div>
+                        <h4 className="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1"><BookOpen className="w-3 h-3" /> {t.glossary}</h4>
+                        {glossaryMatches.length > 0 ? (
+                          <div className="space-y-1">
+                            {glossaryMatches.map(term => (
+                              <div key={term.id} className="text-xs bg-indigo-50 border border-indigo-100 p-1.5 rounded flex justify-between">
+                                <span className="text-slate-600">{term.source}</span>
+                                <span className="font-bold text-indigo-700">{term.target}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
+                      </div>
+
+                      {/* TM Matches */}
+                      <div>
+                        <h4 className="text-xs font-bold text-emerald-600 mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> {t.tmMatches}</h4>
+                        {tmMatches.length > 0 ? (
+                          <div className="space-y-2">
+                            {tmMatches.map(tm => (
+                              <div key={tm.id} className="text-xs bg-emerald-50 border border-emerald-100 p-2 rounded cursor-pointer hover:bg-emerald-100" onClick={() => document.execCommand('insertText', false, tm.targetSegment)}>
+                                <p className="text-slate-500 mb-1 line-clamp-2">{tm.sourceSegment}</p>
+                                <p className="font-bold text-emerald-800 border-t border-emerald-200 pt-1">{tm.targetSegment}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
+                      </div>
+
+                      {/* AI Translation Helper - Always visible */}
+                      <div>
+                        <AITranslationHelper
+                          sourceText={workbenchJob.attachments?.[0] ? "Source document" : undefined}
+                          targetText={editorRef.current?.innerText || ''}
+                          sourceLang={workbenchJob.sourceLang}
+                          targetLang={workbenchJob.targetLang}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Translation Tools Panel */}
-                <div className="flex-1 bg-white flex flex-col">
-                  <div className="p-2 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase text-slate-500 flex items-center gap-2">
-                    <Database className="w-3 h-3" /> {t.tools}
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                    {/* Glossary Matches */}
-                    <div>
-                      <h4 className="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1"><BookOpen className="w-3 h-3" /> {t.glossary}</h4>
-                      {glossaryMatches.length > 0 ? (
-                        <div className="space-y-1">
-                          {glossaryMatches.map(term => (
-                            <div key={term.id} className="text-xs bg-indigo-50 border border-indigo-100 p-1.5 rounded flex justify-between">
-                              <span className="text-slate-600">{term.source}</span>
-                              <span className="font-bold text-indigo-700">{term.target}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
+              <div className="flex-1 bg-slate-200 flex flex-col relative overflow-hidden">
+                {/* Enhanced Word-like Toolbar */}
+                <div className="border-b border-slate-300 bg-white z-10 shadow-sm">
+                  {/* First Row - Font & Size */}
+                  <div className="px-3 py-2 border-b border-slate-200 flex items-center gap-2 flex-wrap">
+                    {/* Font Family */}
+                    <select
+                      value={fontFamily}
+                      onChange={(e) => {
+                        setFontFamily(e.target.value);
+                        document.execCommand('fontName', false, e.target.value);
+                      }}
+                      className="px-2 py-1 border border-slate-300 rounded text-xs focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="Times New Roman">Times New Roman</option>
+                      <option value="Arial">Arial</option>
+                      <option value="Calibri">Calibri</option>
+                      <option value="Garamond">Garamond</option>
+                      <option value="Georgia">Georgia</option>
+                      <option value="Verdana">Verdana</option>
+                      <option value="Courier New">Courier New</option>
+                    </select>
+
+                    {/* Font Size */}
+                    <select
+                      value={fontSize}
+                      onChange={(e) => {
+                        const size = parseInt(e.target.value);
+                        setFontSize(size);
+                        document.execCommand('fontSize', false, '7');
+                        const fontElements = document.querySelectorAll('font[size="7"]');
+                        fontElements.forEach(el => {
+                          (el as HTMLElement).removeAttribute('size');
+                          (el as HTMLElement).style.fontSize = `${size}pt`;
+                        });
+                      }}
+                      className="px-2 py-1 border border-slate-300 rounded text-xs w-16 focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="8">8</option>
+                      <option value="9">9</option>
+                      <option value="10">10</option>
+                      <option value="11">11</option>
+                      <option value="12">12</option>
+                      <option value="14">14</option>
+                      <option value="16">16</option>
+                      <option value="18">18</option>
+                      <option value="20">20</option>
+                      <option value="24">24</option>
+                    </select>
+
+                    {/* Text Color */}
+                    <div className="flex items-center gap-1 border border-slate-300 rounded p-1">
+                      <Type className="w-3.5 h-3.5 text-slate-600" />
+                      <input
+                        type="color"
+                        value={textColor}
+                        onChange={(e) => {
+                          setTextColor(e.target.value);
+                          document.execCommand('foreColor', false, e.target.value);
+                        }}
+                        className="w-6 h-6 cursor-pointer"
+                        title="Text color"
+                      />
                     </div>
 
-                    {/* TM Matches */}
-                    <div>
-                      <h4 className="text-xs font-bold text-emerald-600 mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> {t.tmMatches}</h4>
-                      {tmMatches.length > 0 ? (
-                        <div className="space-y-2">
-                          {tmMatches.map(tm => (
-                            <div key={tm.id} className="text-xs bg-emerald-50 border border-emerald-100 p-2 rounded cursor-pointer hover:bg-emerald-100" onClick={() => document.execCommand('insertText', false, tm.targetSegment)}>
-                              <p className="text-slate-500 mb-1 line-clamp-2">{tm.sourceSegment}</p>
-                              <p className="font-bold text-emerald-800 border-t border-emerald-200 pt-1">{tm.targetSegment}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
-                    </div>
-
-                    {/* AI Translation Helper - Always visible */}
-                    <div>
-                      <AITranslationHelper
-                        sourceText={workbenchJob.attachments?.[0] ? "Source document" : undefined}
-                        targetText={editorRef.current?.innerText || ''}
-                        sourceLang={workbenchJob.sourceLang}
-                        targetLang={workbenchJob.targetLang}
+                    {/* Background Color */}
+                    <div className="flex items-center gap-1 border border-slate-300 rounded p-1">
+                      <Highlighter className="w-3.5 h-3.5 text-slate-600" />
+                      <input
+                        type="color"
+                        value={bgColor === 'transparent' ? '#ffffff' : bgColor}
+                        onChange={(e) => {
+                          setBgColor(e.target.value);
+                          document.execCommand('hiliteColor', false, e.target.value);
+                        }}
+                        className="w-6 h-6 cursor-pointer"
+                        title="Highlight color"
                       />
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
 
-            <div className="flex-1 bg-slate-200 flex flex-col relative overflow-hidden">
-              {/* Enhanced Word-like Toolbar */}
-              <div className="border-b border-slate-300 bg-white z-10 shadow-sm">
-                {/* First Row - Font & Size */}
-                <div className="px-3 py-2 border-b border-slate-200 flex items-center gap-2 flex-wrap">
-                  {/* Font Family */}
-                  <select
-                    value={fontFamily}
-                    onChange={(e) => {
-                      setFontFamily(e.target.value);
-                      document.execCommand('fontName', false, e.target.value);
-                    }}
-                    className="px-2 py-1 border border-slate-300 rounded text-xs focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="Times New Roman">Times New Roman</option>
-                    <option value="Arial">Arial</option>
-                    <option value="Calibri">Calibri</option>
-                    <option value="Garamond">Garamond</option>
-                    <option value="Georgia">Georgia</option>
-                    <option value="Verdana">Verdana</option>
-                    <option value="Courier New">Courier New</option>
-                  </select>
+                  {/* Second Row - Format ting */}
+                  <div className="px-3 py-2 flex items-center gap-2 flex-wrap bg-slate-50">
+                    {/* Text Style */}
+                    <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                      <button onClick={() => executeCommand('bold')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Bold (Ctrl+B)"><Bold className="w-4 h-4" /></button>
+                      <button onClick={() => executeCommand('italic')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Italic (Ctrl+I)"><Italic className="w-4 h-4" /></button>
+                      <button onClick={() => executeCommand('underline')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Underline (Ctrl+U)"><Underline className="w-4 h-4" /></button>
+                    </div>
 
-                  {/* Font Size */}
-                  <select
-                    value={fontSize}
-                    onChange={(e) => {
-                      const size = parseInt(e.target.value);
-                      setFontSize(size);
-                      document.execCommand('fontSize', false, '7');
-                      const fontElements = document.querySelectorAll('font[size="7"]');
-                      fontElements.forEach(el => {
-                        (el as HTMLElement).removeAttribute('size');
-                        (el as HTMLElement).style.fontSize = `${size}pt`;
-                      });
-                    }}
-                    className="px-2 py-1 border border-slate-300 rounded text-xs w-16 focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="8">8</option>
-                    <option value="9">9</option>
-                    <option value="10">10</option>
-                    <option value="11">11</option>
-                    <option value="12">12</option>
-                    <option value="14">14</option>
-                    <option value="16">16</option>
-                    <option value="18">18</option>
-                    <option value="20">20</option>
-                    <option value="24">24</option>
-                  </select>
+                    {/* Alignment */}
+                    <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                      <button onClick={() => executeCommand('justifyLeft')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Align Left"><AlignLeft className="w-4 h-4" /></button>
+                      <button onClick={() => executeCommand('justifyCenter')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Center"><AlignCenter className="w-4 h-4" /></button>
+                      <button onClick={() => executeCommand('justifyRight')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Align Right"><AlignRight className="w-4 h-4" /></button>
+                      <button onClick={() => executeCommand('justifyFull')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Justify"><AlignJustify className="w-4 h-4" /></button>
+                    </div>
 
-                  {/* Text Color */}
-                  <div className="flex items-center gap-1 border border-slate-300 rounded p-1">
-                    <Type className="w-3.5 h-3.5 text-slate-600" />
-                    <input
-                      type="color"
-                      value={textColor}
-                      onChange={(e) => {
-                        setTextColor(e.target.value);
-                        document.execCommand('foreColor', false, e.target.value);
-                      }}
-                      className="w-6 h-6 cursor-pointer"
-                      title="Text color"
-                    />
-                  </div>
+                    {/* Lists */}
+                    <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                      <button onClick={() => executeCommand('insertUnorderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Bullet List"><ListIcon className="w-4 h-4" /></button>
+                      <button onClick={() => executeCommand('insertOrderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Numbered List"><ListOrdered className="w-4 h-4" /></button>
+                    </div>
 
-                  {/* Background Color */}
-                  <div className="flex items-center gap-1 border border-slate-300 rounded p-1">
-                    <Highlighter className="w-3.5 h-3.5 text-slate-600" />
-                    <input
-                      type="color"
-                      value={bgColor === 'transparent' ? '#ffffff' : bgColor}
-                      onChange={(e) => {
-                        setBgColor(e.target.value);
-                        document.execCommand('hiliteColor', false, e.target.value);
-                      }}
-                      className="w-6 h-6 cursor-pointer"
-                      title="Highlight color"
-                    />
-                  </div>
-                </div>
+                    {/* Indentation */}
+                    <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                      <button onClick={() => executeCommand('indent')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 text-xs font-bold" title="Increase Indent">→</button>
+                      <button onClick={() => executeCommand('outdent')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 text-xs font-bold" title="Decrease Indent">←</button>
+                    </div>
 
-                {/* Second Row - Format ting */}
-                <div className="px-3 py-2 flex items-center gap-2 flex-wrap bg-slate-50">
-                  {/* Text Style */}
-                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                    <button onClick={() => executeCommand('bold')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Bold (Ctrl+B)"><Bold className="w-4 h-4" /></button>
-                    <button onClick={() => executeCommand('italic')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Italic (Ctrl+I)"><Italic className="w-4 h-4" /></button>
-                    <button onClick={() => executeCommand('underline')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Underline (Ctrl+U)"><Underline className="w-4 h-4" /></button>
-                  </div>
+                    {/* Page Orientation */}
+                    <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                      <button onClick={() => setTargetOrientation('portrait')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'portrait' ? 'bg-primary-600 text-white' : 'text-slate-500'}`} title="Portrait">📄</button>
+                      <button onClick={() => setTargetOrientation('landscape')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'landscape' ? 'bg-primary-600 text-white' : 'text-slate-500'}`} title="Landscape">📃</button>
+                    </div>
 
-                  {/* Alignment */}
-                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                    <button onClick={() => executeCommand('justifyLeft')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Align Left"><AlignLeft className="w-4 h-4" /></button>
-                    <button onClick={() => executeCommand('justifyCenter')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Center"><AlignCenter className="w-4 h-4" /></button>
-                    <button onClick={() => executeCommand('justifyRight')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Align Right"><AlignRight className="w-4 h-4" /></button>
-                    <button onClick={() => executeCommand('justifyFull')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Justify"><AlignJustify className="w-4 h-4" /></button>
-                  </div>
+                    {/* Zoom */}
+                    <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm">
+                      <button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomOut className="w-3.5 h-3.5" /></button>
+                      <span className="text-[10px] w-10 text-center font-medium text-slate-600">{Math.round(zoomLevel * 100)}%</span>
+                      <button onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
+                    </div>
 
-                  {/* Lists */}
-                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                    <button onClick={() => executeCommand('insertUnorderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Bullet List"><ListIcon className="w-4 h-4" /></button>
-                    <button onClick={() => executeCommand('insertOrderedList')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Numbered List"><ListOrdered className="w-4 h-4" /></button>
-                  </div>
-
-                  {/* Indentation */}
-                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                    <button onClick={() => executeCommand('indent')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 text-xs font-bold" title="Increase Indent">→</button>
-                    <button onClick={() => executeCommand('outdent')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600 text-xs font-bold" title="Decrease Indent">←</button>
-                  </div>
-
-                  {/* Page Orientation */}
-                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                    <button onClick={() => setTargetOrientation('portrait')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'portrait' ? 'bg-primary-600 text-white' : 'text-slate-500'}`} title="Portrait">📄</button>
-                    <button onClick={() => setTargetOrientation('landscape')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'landscape' ? 'bg-primary-600 text-white' : 'text-slate-500'}`} title="Landscape">📃</button>
-                  </div>
-
-                  {/* Zoom */}
-                  <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm">
-                    <button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomOut className="w-3.5 h-3.5" /></button>
-                    <span className="text-[10px] w-10 text-center font-medium text-slate-600">{Math.round(zoomLevel * 100)}%</span>
-                    <button onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
-                  </div>
-
-                  <div className="ml-auto">
-                    <button onClick={handleMagicDraft} disabled={isAiTranslating} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
-                      <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : "Magic Draft"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-1 relative overflow-auto bg-slate-200 p-8 flex justify-center items-start">
-                {isAiTranslating && (
-                  <div className="absolute inset-0 z-50 bg-slate-900/20 backdrop-blur-[1px] flex flex-col items-center justify-center">
-                    <div className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
-                      <RefreshCw className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
-                      <p className="font-bold text-slate-800">Translating Document...</p>
-                      <p className="text-xs text-slate-500 mt-1">Applying Sworn Translation Standards</p>
+                    <div className="ml-auto">
+                      <button onClick={handleMagicDraft} disabled={isAiTranslating} className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
+                        <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : "Magic Draft"}
+                      </button>
                     </div>
                   </div>
-                )}
-                <div className="origin-top transition-transform duration-200 ease-out" style={{ transform: `scale(${zoomLevel})` }}>
-                  <div ref={editorRef} contentEditable suppressContentEditableWarning
-                    className={`editor-content bg-white text-slate-900 shadow-xl outline-none p-[20mm] ${targetOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'}`}
-                    style={{ height: 'auto' }}
-                    dangerouslySetInnerHTML={{ __html: workbenchJob.translatedText || '<div class="text-slate-300 italic text-center mt-20">Click "Auto-Translate" to generate content...</div>' }} />
+                </div>
+
+                <div className="flex-1 relative overflow-auto bg-slate-200 p-8 flex justify-center items-start">
+                  {isAiTranslating && (
+                    <div className="absolute inset-0 z-50 bg-slate-900/20 backdrop-blur-[1px] flex flex-col items-center justify-center">
+                      <div className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
+                        <RefreshCw className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
+                        <p className="font-bold text-slate-800">Translating Document...</p>
+                        <p className="text-xs text-slate-500 mt-1">Applying Sworn Translation Standards</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="origin-top transition-transform duration-200 ease-out" style={{ transform: `scale(${zoomLevel})` }}>
+                    <div ref={editorRef} contentEditable suppressContentEditableWarning
+                      className={`editor-content bg-white text-slate-900 shadow-xl outline-none p-[20mm] ${targetOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'}`}
+                      style={{ height: 'auto' }}
+                      dangerouslySetInnerHTML={{ __html: workbenchJob.translatedText || '<div class="text-slate-300 italic text-center mt-20">Click "Auto-Translate" to generate content...</div>' }} />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {isFormOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-2xl shrink-0">
-              <h2 className="text-xl font-bold text-slate-900">{editingJob ? t.editJob : t.newTranslation}</h2>
-              <button onClick={closeForm} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-full transition"><XIcon /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6">
-              <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.creationDate}</label><input required type="date" className={inputClass} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} /></div>
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">{t.dueDateLabel}</label><input type="date" className={inputClass} value={formData.dueDate || ''} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} /></div>
-                <div className="col-span-2 md:col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.clientName}</label><input required list="client-list" type="text" placeholder="e.g., John Doe Corp" className={inputClass} value={formData.clientName || ''} onChange={handleClientSelect} /><datalist id="client-list">{uniqueClients.map(([name]) => (<option key={name} value={name} />))}</datalist></div>
-                <div className="col-span-2 md:col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.clientInfo}</label><input type="text" placeholder="Address / Tax ID" className={inputClass} value={formData.clientInfo || ''} onChange={e => setFormData({ ...formData, clientInfo: e.target.value })} /></div>
-                <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">{t.docType}</label><input required type="text" placeholder="e.g., Marriage Certificate" className={inputClass} value={formData.documentType || ''} onChange={e => setFormData({ ...formData, documentType: e.target.value })} /></div>
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.sourceLang}</label><select className={inputClass} value={formData.sourceLang} onChange={e => setFormData({ ...formData, sourceLang: e.target.value })}>{Object.values(Language).map(l => <option key={l} value={l}>{l}</option>)}</select></div>
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.targetLang}</label><select className={inputClass} value={formData.targetLang} onChange={e => setFormData({ ...formData, targetLang: e.target.value })}>{Object.values(Language).map(l => <option key={l} value={l}>{l}</option>)}</select></div>
+      {
+        isFormOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col">
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-2xl shrink-0">
+                <h2 className="text-xl font-bold text-slate-900">{editingJob ? t.editJob : t.newTranslation}</h2>
+                <button onClick={closeForm} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-full transition"><XIcon /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.creationDate} <span className="text-rose-500">*</span></label><input required type="date" className={`${inputClass} ${formErrors.date ? 'border-rose-500 ring-1 ring-rose-500' : ''}`} value={formData.date} onChange={e => { setFormData({ ...formData, date: e.target.value }); if (formErrors.date) setFormErrors({ ...formErrors, date: false }); }} /></div>
+                  <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">{t.dueDateLabel} <span className="text-rose-500">*</span></label><input required type="date" className={`${inputClass} ${formErrors.dueDate ? 'border-rose-500 ring-1 ring-rose-500' : ''}`} value={formData.dueDate || ''} onChange={e => { setFormData({ ...formData, dueDate: e.target.value }); if (formErrors.dueDate) setFormErrors({ ...formErrors, dueDate: false }); }} /></div>
+                  <div className="col-span-2 md:col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.clientName} <span className="text-rose-500">*</span></label><input required list="client-list" type="text" placeholder="e.g., John Doe Corp" className={`${inputClass} ${formErrors.clientName ? 'border-rose-500 ring-1 ring-rose-500' : ''}`} value={formData.clientName || ''} onChange={(e) => { handleClientSelect(e); if (formErrors.clientName) setFormErrors({ ...formErrors, clientName: false }); }} /><datalist id="client-list">{uniqueClients.map(([name]) => (<option key={name} value={name} />))}</datalist></div>
+                  <div className="col-span-2 md:col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.clientInfo}</label><input type="text" placeholder="Address / Tax ID" className={inputClass} value={formData.clientInfo || ''} onChange={e => setFormData({ ...formData, clientInfo: e.target.value })} /></div>
+                  <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">{t.docType} <span className="text-rose-500">*</span></label><input required type="text" placeholder="e.g., Marriage Certificate" className={`${inputClass} ${formErrors.documentType ? 'border-rose-500 ring-1 ring-rose-500' : ''}`} value={formData.documentType || ''} onChange={e => { setFormData({ ...formData, documentType: e.target.value }); if (formErrors.documentType) setFormErrors({ ...formErrors, documentType: false }); }} /></div>
+                  <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.sourceLang} <span className="text-rose-500">*</span></label><select className={`${inputClass} ${formErrors.sourceLang ? 'border-rose-500 ring-1 ring-rose-500' : ''}`} value={formData.sourceLang} onChange={e => { setFormData({ ...formData, sourceLang: e.target.value }); if (formErrors.sourceLang) setFormErrors({ ...formErrors, sourceLang: false }); }}>{Object.values(Language).map(l => <option key={l} value={l}>{l}</option>)}</select></div>
+                  <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.targetLang} <span className="text-rose-500">*</span></label><select className={`${inputClass} ${formErrors.targetLang ? 'border-rose-500 ring-1 ring-rose-500' : ''}`} value={formData.targetLang} onChange={e => { setFormData({ ...formData, targetLang: e.target.value }); if (formErrors.targetLang) setFormErrors({ ...formErrors, targetLang: false }); }}>{Object.values(Language).map(l => <option key={l} value={l}>{l}</option>)}</select></div>
 
-                {/* Batch Upload Section */}
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">{t.batchUpload}</label>
-                  <div className="flex flex-wrap gap-3 mb-2">
-                    {formData.attachments && formData.attachments.map((src, idx) => (
-                      <div key={idx} className="relative w-24 h-24 group">
-                        <img src={src} alt="Attachment" className="w-full h-full object-cover rounded-lg border border-slate-200 shadow-sm" />
-                        <button type="button" onClick={() => removeAttachment(idx)} className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
-                      </div>
-                    ))}
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-primary-500 hover:text-primary-500 transition-colors bg-slate-50 hover:bg-primary-50">
-                      <FolderOpen className="w-5 h-5" />
-                      <span className="text-[10px] font-medium mt-1">{t.addPhoto}</span>
-                    </button>
-                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleFileChange} />
+                  {/* Batch Upload Section */}
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">{t.batchUpload}</label>
+                    <div className="flex flex-wrap gap-3 mb-2">
+                      {formData.attachments && formData.attachments.map((src, idx) => (
+                        <div key={idx} className="relative w-24 h-24 group bg-slate-100 rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center">
+                          {src.startsWith('blob:') || src.match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
+                            // It's likely an image or a blob preview of an image (we need better detection for blob types if possible, but simplest is trying to render it)
+                            <img src={src} alt="Attachment" className="w-full h-full object-cover"
+                              onError={(e) => {
+                                // Fallback to Icon if image load fails aka it's a PDF blob
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          {/* Fallback Icon for PDFs/Docs or failed images */}
+                          <div className={`hidden flex flex-col items-center justify-center p-2 text-slate-500 ${(src.startsWith('blob:') || src.match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? '' : '!flex'}`}>
+                            <FileText className="w-8 h-8 mb-1" />
+                            <span className="text-[10px] break-all line-clamp-2 px-1 text-center">Document</span>
+                          </div>
+
+                          <button type="button" onClick={() => removeAttachment(idx)} className="absolute top-1 right-1 bg-rose-500 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+
+                      {/* Add File Button */}
+                      <button type="button" onClick={() => fileInputRef.current?.click()} className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-primary-500 hover:text-primary-500 transition-colors bg-slate-50 hover:bg-primary-50">
+                        <FolderOpen className="w-5 h-5" />
+                        <span className="text-[10px] font-medium mt-1">{t.addPhoto}</span>
+                      </button>
+                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.jpg,.jpeg,.png,.webp,.heic" multiple onChange={handleFileChange} />
+
+                      {/* Camera Button for Mobile */}
+                      <label className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-primary-500 hover:text-primary-500 transition-colors bg-slate-50 hover:bg-primary-50 cursor-pointer">
+                        <Camera className="w-5 h-5" />
+                        <span className="text-[10px] font-medium mt-1">Camera</span>
+                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+                      </label>
+                    </div>
                   </div>
-                </div>
 
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.pageCount}</label><input type="number" min="1" className={inputClass} value={formData.pageCount} onChange={e => setFormData({ ...formData, pageCount: parseInt(e.target.value) })} /></div>
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.totalPrice} (TND)</label><div className="relative"><span className="absolute left-3 top-2 text-slate-500 font-bold text-xs">TND</span><input required type="number" min="0" step="0.001" className={`${inputClass} pl-10`} value={formData.priceTotal} onChange={e => setFormData({ ...formData, priceTotal: parseFloat(e.target.value) })} /></div></div>
-                <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.status}</label><select className={inputClass} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as TranslationStatus })}>{Object.values(TranslationStatus).map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-                <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">{t.remarks}</label><textarea className={`${inputClass} h-20`} value={formData.remarks || ''} onChange={e => setFormData({ ...formData, remarks: e.target.value })}></textarea></div>
-                <input type="submit" className="hidden" />
-              </form>
-            </div>
-            <div className="p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex justify-end gap-3 shrink-0">
-              <button type="button" onClick={closeForm} className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium">{t.cancel}</button>
-              <button onClick={(e) => handleSubmit(e as any)} className="px-4 py-2 bg-primary-600 text-white hover:bg-primary-700 rounded-lg shadow-sm transition-colors text-sm font-medium">{editingJob ? t.updateJob : t.saveJob}</button>
+                  {/* Final Document Section - MULTI-FILE SUPPORT */}
+                  <div className="col-span-2 bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 mb-2">
+                    <label className="block text-sm font-bold text-emerald-800 mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4" /> {t.finalProduct}</div>
+                      {/* Add Button if there are already files */}
+                      {(formData.finalDocuments && formData.finalDocuments.length > 0) && (
+                        <label className="cursor-pointer text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1">
+                          <Plus className="w-3 h-3" /> {t.addFile}
+                          <input
+                            type="file"
+                            multiple
+                            className="hidden"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.jpg,.jpeg,.png,.webp,.heic"
+                            onChange={async (e) => {
+                              if (e.target.files && e.target.files.length > 0) {
+                                const files = Array.from(e.target.files);
+                                let jId = editingJob?.id || formData.id;
+
+                                // Make sure we have an ID
+                                if (!jId) {
+                                  jId = crypto.randomUUID();
+                                  setFormData(prev => ({ ...prev, id: jId }));
+                                }
+
+                                // Upload Loop
+                                for (const file of files) {
+                                  try {
+                                    const { url, error } = await uploadDocument(file, jId!, 'translation');
+                                    if (url) {
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        finalDocuments: [...(prev.finalDocuments || []), url],
+                                        // Sync legacy field for now (first one)
+                                        finalDocument: (prev.finalDocuments || []).length === 0 ? url : prev.finalDocument
+                                      }));
+                                    } else {
+                                      alert(`Failed to upload ${file.name}: ${error}`);
+                                    }
+                                  } catch (err) { console.error(err); }
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </label>
+
+                    <div className="flex flex-col gap-3">
+                      {/* List of Files */}
+                      {formData.finalDocuments && formData.finalDocuments.length > 0 ? (
+                        <div className="space-y-2">
+                          {formData.finalDocuments.map((docUrl, idx) => (
+                            <div key={idx} className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-emerald-200 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center shrink-0">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium text-slate-800 truncate">Final_Doc_{idx + 1}_{formData.documentType}</p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase">{t.ready}</span>
+                                    <button type="button" onClick={() => openPreview(formData.finalDocuments!, idx, `Final_${formData.clientName}_${formData.documentType}`)} className="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
+                                      <Eye className="w-3 h-3" /> {t.preview}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <a href={docUrl} download={`Final_${formData.clientName}_${formData.documentType}_${idx + 1}`} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors" title="Download">
+                                  <Download className="w-3.5 h-3.5" />
+                                </a>
+                                <button type="button" onClick={() => {
+                                  const newDocs = formData.finalDocuments!.filter((_, i) => i !== idx);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    finalDocuments: newDocs,
+                                    finalDocument: newDocs.length > 0 ? newDocs[0] : undefined // Sync legacy
+                                  }));
+                                }} className="p-1.5 hover:bg-rose-100 hover:text-rose-600 rounded-lg text-slate-400 transition-colors" title="Remove">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        // Empty State
+                        <div className="text-center py-6 bg-white border-2 border-dashed border-emerald-200 rounded-lg group hover:border-emerald-400 transition-colors">
+                          <p className="text-sm text-slate-500 mb-3">{t.noFinalDocs}</p>
+                          <label className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-colors shadow-sm cursor-pointer">
+                            <Upload className="w-4 h-4" /> {t.uploadFinal}
+                            <input
+                              type="file"
+                              multiple
+                              className="hidden"
+                              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.jpg,.jpeg,.png,.webp,.heic"
+                              onChange={async (e) => {
+                                if (e.target.files && e.target.files.length > 0) {
+                                  const files = Array.from(e.target.files);
+                                  let jId = editingJob?.id || formData.id;
+                                  // Ensure ID
+                                  if (!jId) {
+                                    jId = crypto.randomUUID();
+                                    setFormData(prev => ({ ...prev, id: jId }));
+                                  }
+
+                                  for (const file of files) {
+                                    try {
+                                      const { url, error } = await uploadDocument(file, jId!, 'translation');
+                                      if (url) {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          finalDocuments: [...(prev.finalDocuments || []), url],
+                                          finalDocument: (prev.finalDocuments || []).length === 0 ? url : prev.finalDocument
+                                        }));
+                                      } else {
+                                        alert(`Failed to upload ${file.name}: ${error}`);
+                                      }
+                                    } catch (err) { console.error(err); }
+                                  }
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.pageCount}</label><input type="number" min="1" className={inputClass} value={formData.pageCount} onChange={e => setFormData({ ...formData, pageCount: parseInt(e.target.value) })} /></div>
+                  <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.totalPrice} (TND)</label><div className="relative"><span className="absolute left-3 top-2 text-slate-500 font-bold text-xs">TND</span><input required type="number" min="0" step="0.001" className={`${inputClass} pl-10`} value={formData.priceTotal} onChange={e => setFormData({ ...formData, priceTotal: parseFloat(e.target.value) })} /></div></div>
+                  <div className="col-span-1"><label className="block text-sm font-medium text-slate-700 mb-1">{t.status}</label><select className={inputClass} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as TranslationStatus })}>{Object.values(TranslationStatus).map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                  <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">{t.remarks}</label><textarea className={`${inputClass} h-20`} value={formData.remarks || ''} onChange={e => setFormData({ ...formData, remarks: e.target.value })}></textarea></div>
+                  <input type="submit" className="hidden" />
+                </form>
+              </div>
+              <div className="p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex justify-end gap-3 shrink-0">
+                <button type="button" onClick={closeForm} className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium">{t.cancel}</button>
+                <button onClick={(e) => handleSubmit(e as any)} className="px-4 py-2 bg-primary-600 text-white hover:bg-primary-700 rounded-lg shadow-sm transition-colors text-sm font-medium">{editingJob ? t.updateJob : t.saveJob}</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Workbench Modal */}
-      {workbenchJob && (
-        <div className="fixed inset-0 z-[80] bg-white flex flex-col animate-in fade-in duration-200">
-          <style>{`
+      {
+        workbenchJob && (
+          <div className="fixed inset-0 z-[80] bg-white flex flex-col animate-in fade-in duration-200">
+            <style>{`
             /* WORD DOCUMENT STYLING - WORD ALIKE */
             .editor-content {
               font-family: "Times New Roman", Times, serif !important;
@@ -996,128 +1391,129 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
             }
           `}</style>
 
-          <div className="bg-white px-6 py-3 flex justify-between items-center border-b border-slate-200 shrink-0 shadow-sm z-30">
-            <div>
-              <h2 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Languages className="w-5 h-5 text-primary-600" /> {t.editorWorkbench}</h2>
-              <p className="text-xs text-slate-500">{workbenchJob.clientName} • {workbenchJob.documentType}</p>
+            <div className="bg-white px-6 py-3 flex justify-between items-center border-b border-slate-200 shrink-0 shadow-sm z-30">
+              <div>
+                <h2 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Languages className="w-5 h-5 text-primary-600" /> {t.editorWorkbench}</h2>
+                <p className="text-xs text-slate-500">{workbenchJob.clientName} • {workbenchJob.documentType}</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={downloadAsWord} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><FileDown className="w-4 h-4" /> {t.downloadDoc}</button>
+                <button onClick={handleWorkbenchSave} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><Save className="w-4 h-4" /> {t.save}</button>
+                <button onClick={closeWorkbench} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors">{t.close}</button>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button onClick={downloadAsWord} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><FileDown className="w-4 h-4" /> {t.downloadDoc}</button>
-              <button onClick={handleWorkbenchSave} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"><Save className="w-4 h-4" /> {t.save}</button>
-              <button onClick={closeWorkbench} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors">{t.close}</button>
+
+            <div className="flex-1 flex overflow-hidden">
+              <div className="w-1/3 lg:w-2/5 bg-slate-100 border-r border-slate-200 flex flex-col relative z-10">
+                <div className="flex-1 flex flex-col">
+                  {/* Source Image */}
+                  <div className="h-2/3 relative border-b border-slate-200">
+                    <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-white/90 p-1.5 rounded-lg shadow-sm backdrop-blur-sm">
+                      <button onClick={() => setRotation(r => r - 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCcw className="w-4 h-4" /></button>
+                      <button onClick={() => setRotation(r => r + 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCw className="w-4 h-4" /></button>
+                      <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                      <button onClick={() => workbenchJob.attachments && openPreview(workbenchJob.attachments, 0, `${workbenchJob.clientName}_${workbenchJob.documentType}`)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Maximize2 className="w-4 h-4" /></button>
+                    </div>
+                    <div className="w-full h-full overflow-hidden flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+                      {workbenchJob.attachments && workbenchJob.attachments.length > 0 ? (
+                        <img src={workbenchJob.attachments[0]} alt="Source" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.3s ease', maxWidth: '100%', maxHeight: '100%' }} className="object-contain shadow-lg rounded-sm bg-white" />
+                      ) : (
+                        <div className="text-center text-slate-400"><FileText className="w-12 h-12 mx-auto mb-2 opacity-50" /><p>No document uploaded.</p></div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Translation Tools Panel */}
+                  <div className="flex-1 bg-white flex flex-col">
+                    <div className="p-2 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase text-slate-500 flex items-center gap-2">
+                      <Database className="w-3 h-3" /> {t.tools}
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                      {/* Glossary Matches */}
+                      <div>
+                        <h4 className="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1"><BookOpen className="w-3 h-3" /> {t.glossary}</h4>
+                        {glossaryMatches.length > 0 ? (
+                          <div className="space-y-1">
+                            {glossaryMatches.map(term => (
+                              <div key={term.id} className="text-xs bg-indigo-50 border border-indigo-100 p-1.5 rounded flex justify-between">
+                                <span className="text-slate-600">{term.source}</span>
+                                <span className="font-bold text-indigo-700">{term.target}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
+                      </div>
+
+                      {/* TM Matches */}
+                      <div>
+                        <h4 className="text-xs font-bold text-emerald-600 mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> {t.tmMatches}</h4>
+                        {tmMatches.length > 0 ? (
+                          <div className="space-y-2">
+                            {tmMatches.map(tm => (
+                              <div key={tm.id} className="text-xs bg-emerald-50 border border-emerald-100 p-2 rounded cursor-pointer hover:bg-emerald-100" onClick={() => document.execCommand('insertText', false, tm.targetSegment)}>
+                                <p className="text-slate-500 mb-1 line-clamp-2">{tm.sourceSegment}</p>
+                                <p className="font-bold text-emerald-800 border-t border-emerald-200 pt-1">{tm.targetSegment}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 bg-slate-200 flex flex-col relative overflow-hidden">
+                <div className="p-2 border-b border-slate-300 flex flex-wrap gap-2 justify-between items-center bg-slate-100 z-10 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                      <button onClick={() => executeCommand('bold')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Bold className="w-4 h-4" /></button>
+                      <button onClick={() => executeCommand('italic')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Italic className="w-4 h-4" /></button>
+                      <button onClick={() => executeCommand('underline')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Underline className="w-4 h-4" /></button>
+                      <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                      <button onClick={() => executeCommand('justifyLeft')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignLeft className="w-4 h-4" /></button>
+                      <button onClick={() => executeCommand('justifyCenter')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignCenter className="w-4 h-4" /></button>
+                      <button onClick={() => executeCommand('justifyRight')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignRight className="w-4 h-4" /></button>
+                    </div>
+                    <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
+                      <button onClick={() => setTargetOrientation('portrait')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'portrait' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>{t.portrait}</button>
+                      <button onClick={() => setTargetOrientation('landscape')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'landscape' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>{t.landscape}</button>
+                    </div>
+                    <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm ml-2">
+                      <button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomOut className="w-3.5 h-3.5" /></button>
+                      <span className="text-[10px] w-8 text-center font-medium text-slate-600">{Math.round(zoomLevel * 100)}%</span>
+                      <button onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </div>
+                  <button onClick={handleMagicDraft} disabled={isAiTranslating} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
+                    <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : "Magic Draft"}
+                  </button>
+                </div>
+
+                <div className="flex-1 relative overflow-auto bg-slate-200 p-8 flex justify-center items-start">
+                  {isAiTranslating && (
+                    <div className="absolute inset-0 z-50 bg-slate-900/20 backdrop-blur-[1px] flex flex-col items-center justify-center">
+                      <div className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
+                        <RefreshCw className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
+                        <p className="font-bold text-slate-800">Translating Document...</p>
+                        <p className="text-xs text-slate-500 mt-1">Applying Sworn Translation Standards</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="origin-top transition-transform duration-200 ease-out" style={{ transform: `scale(${zoomLevel})` }}>
+                    <div ref={editorRef} contentEditable suppressContentEditableWarning
+                      className={`editor-content bg-white text-slate-900 shadow-xl outline-none p-[20mm] ${targetOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'}`}
+                      style={{ height: 'auto' }}
+                      dangerouslySetInnerHTML={{ __html: workbenchJob.translatedText || '<div class="text-slate-300 italic text-center mt-20">Click "Auto-Translate" to generate content...</div>' }} />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+        )
+      }
 
-          <div className="flex-1 flex overflow-hidden">
-            <div className="w-1/3 lg:w-2/5 bg-slate-100 border-r border-slate-200 flex flex-col relative z-10">
-              <div className="flex-1 flex flex-col">
-                {/* Source Image */}
-                <div className="h-2/3 relative border-b border-slate-200">
-                  <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-white/90 p-1.5 rounded-lg shadow-sm backdrop-blur-sm">
-                    <button onClick={() => setRotation(r => r - 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCcw className="w-4 h-4" /></button>
-                    <button onClick={() => setRotation(r => r + 90)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCw className="w-4 h-4" /></button>
-                    <div className="w-px h-4 bg-slate-300 mx-1"></div>
-                    <button onClick={() => workbenchJob.attachments && setPreviewImage(workbenchJob.attachments[0])} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Maximize2 className="w-4 h-4" /></button>
-                  </div>
-                  <div className="w-full h-full overflow-hidden flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
-                    {workbenchJob.attachments && workbenchJob.attachments.length > 0 ? (
-                      <img src={workbenchJob.attachments[0]} alt="Source" style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.3s ease', maxWidth: '100%', maxHeight: '100%' }} className="object-contain shadow-lg rounded-sm bg-white" />
-                    ) : (
-                      <div className="text-center text-slate-400"><FileText className="w-12 h-12 mx-auto mb-2 opacity-50" /><p>No document uploaded.</p></div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Translation Tools Panel */}
-                <div className="flex-1 bg-white flex flex-col">
-                  <div className="p-2 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase text-slate-500 flex items-center gap-2">
-                    <Database className="w-3 h-3" /> {t.tools}
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                    {/* Glossary Matches */}
-                    <div>
-                      <h4 className="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1"><BookOpen className="w-3 h-3" /> {t.glossary}</h4>
-                      {glossaryMatches.length > 0 ? (
-                        <div className="space-y-1">
-                          {glossaryMatches.map(term => (
-                            <div key={term.id} className="text-xs bg-indigo-50 border border-indigo-100 p-1.5 rounded flex justify-between">
-                              <span className="text-slate-600">{term.source}</span>
-                              <span className="font-bold text-indigo-700">{term.target}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
-                    </div>
-
-                    {/* TM Matches */}
-                    <div>
-                      <h4 className="text-xs font-bold text-emerald-600 mb-2 flex items-center gap-1"><Sparkles className="w-3 h-3" /> {t.tmMatches}</h4>
-                      {tmMatches.length > 0 ? (
-                        <div className="space-y-2">
-                          {tmMatches.map(tm => (
-                            <div key={tm.id} className="text-xs bg-emerald-50 border border-emerald-100 p-2 rounded cursor-pointer hover:bg-emerald-100" onClick={() => document.execCommand('insertText', false, tm.targetSegment)}>
-                              <p className="text-slate-500 mb-1 line-clamp-2">{tm.sourceSegment}</p>
-                              <p className="font-bold text-emerald-800 border-t border-emerald-200 pt-1">{tm.targetSegment}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <p className="text-xs text-slate-400 italic">{t.noMatches}</p>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 bg-slate-200 flex flex-col relative overflow-hidden">
-              <div className="p-2 border-b border-slate-300 flex flex-wrap gap-2 justify-between items-center bg-slate-100 z-10 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                    <button onClick={() => executeCommand('bold')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Bold className="w-4 h-4" /></button>
-                    <button onClick={() => executeCommand('italic')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Italic className="w-4 h-4" /></button>
-                    <button onClick={() => executeCommand('underline')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><Underline className="w-4 h-4" /></button>
-                    <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                    <button onClick={() => executeCommand('justifyLeft')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignLeft className="w-4 h-4" /></button>
-                    <button onClick={() => executeCommand('justifyCenter')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignCenter className="w-4 h-4" /></button>
-                    <button onClick={() => executeCommand('justifyRight')} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><AlignRight className="w-4 h-4" /></button>
-                  </div>
-                  <div className="flex bg-white border border-slate-200 p-1 rounded-lg gap-1 shadow-sm">
-                    <button onClick={() => setTargetOrientation('portrait')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'portrait' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>{t.portrait}</button>
-                    <button onClick={() => setTargetOrientation('landscape')} className={`px-2 py-1 rounded text-[10px] font-bold ${targetOrientation === 'landscape' ? 'bg-slate-800 text-white' : 'text-slate-500'}`}>{t.landscape}</button>
-                  </div>
-                  <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm ml-2">
-                    <button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomOut className="w-3.5 h-3.5" /></button>
-                    <span className="text-[10px] w-8 text-center font-medium text-slate-600">{Math.round(zoomLevel * 100)}%</span>
-                    <button onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))} className="p-1 text-slate-500 hover:bg-slate-100 rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
-                  </div>
-                </div>
-                <button onClick={handleMagicDraft} disabled={isAiTranslating} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50 shadow-sm">
-                  <Sparkles className={`w-3.5 h-3.5 ${isAiTranslating ? 'animate-spin' : ''}`} /> {isAiTranslating ? t.generating : "Magic Draft"}
-                </button>
-              </div>
-
-              <div className="flex-1 relative overflow-auto bg-slate-200 p-8 flex justify-center items-start">
-                {isAiTranslating && (
-                  <div className="absolute inset-0 z-50 bg-slate-900/20 backdrop-blur-[1px] flex flex-col items-center justify-center">
-                    <div className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center">
-                      <RefreshCw className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
-                      <p className="font-bold text-slate-800">Translating Document...</p>
-                      <p className="text-xs text-slate-500 mt-1">Applying Sworn Translation Standards</p>
-                    </div>
-                  </div>
-                )}
-                <div className="origin-top transition-transform duration-200 ease-out" style={{ transform: `scale(${zoomLevel})` }}>
-                  <div ref={editorRef} contentEditable suppressContentEditableWarning
-                    className={`editor-content bg-white text-slate-900 shadow-xl outline-none p-[20mm] ${targetOrientation === 'landscape' ? 'w-[297mm] min-h-[210mm]' : 'w-[210mm] min-h-[297mm]'}`}
-                    style={{ height: 'auto' }}
-                    dangerouslySetInnerHTML={{ __html: workbenchJob.translatedText || '<div class="text-slate-300 italic text-center mt-20">Click "Auto-Translate" to generate content...</div>' }} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-    </div>
+    </div >
   );
 };
 

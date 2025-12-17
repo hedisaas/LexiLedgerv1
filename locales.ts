@@ -22,6 +22,19 @@ export const translations = {
     password: "Password",
     signIn: "Sign In",
     errorCredentials: "Invalid credentials",
+    staffLogin: "Staff Login",
+    adminRole: "Admin",
+    secretaryRole: "Secretary",
+    fullName: "Full Name",
+    fullNamePlaceholder: "Your full name",
+    emailLabel: "Email",
+    emailPlaceholder: "your@email.com",
+    haveAccount: "Already have an account? Sign in",
+    noAccount: "Don't have an account? Sign up",
+    creatingAccount: "Creating Account...",
+    signingIn: "Signing In...",
+    loggingIn: "Logging In...",
+    createAccountBtn: "Create Account",
 
     // Dashboard
     overview: "Dashboard Overview",
@@ -180,6 +193,43 @@ export const translations = {
     analyzing: "Analyzing content...",
     uploadFailed: "Upload Failed",
     imported: "Imported",
+
+    // Invoices & PDFs
+    swornTranslation: "Sworn Translation",
+    designation: "Designation",
+    qtyPages: "Qty (Pages)",
+    unitPrice: "Unit Price (HT)",
+    totalHT: "Total HT",
+    totalTTC: "Total TTC",
+    vat: "VAT",
+    stamp: "Fiscal Stamp",
+    scanVerify: "Scan to Verify",
+    digitalSig: "Digital Signature Valid",
+    docId: "Document ID",
+    validityQuote: "Quote valid for 30 days.",
+    thanksInv: "Thank you for your business.",
+
+    // Final Docs
+    finalProduct: "Final Translated Product",
+    noFinalDocs: "No final documents uploaded yet.",
+    uploadFinal: "Upload Final Version(s)",
+    addFile: "Add File",
+    preview: "Preview",
+    ready: "READY",
+    remove: "Remove",
+    download: "Download",
+
+    // Email & Modals
+    sendViaEmail: "Send {type} via Email",
+    emailPrompt: "Enter the client's email address. The PDF will be generated and attached automatically.",
+    testingMode: "Testing Mode: Sending only to",
+    clientEmail: "Client Email",
+    sendEmail: "Send Email",
+    sending: "Sending...",
+    invoiceGenerated: "Invoice Generated!",
+    success: "Success!",
+    markCompleted: "Yes, Mark Completed",
+    date: "Date"
   },
   fr: {
     // Sidebar
@@ -201,6 +251,19 @@ export const translations = {
     password: "Mot de passe",
     signIn: "Se connecter",
     errorCredentials: "Identifiants invalides",
+    staffLogin: "Accès Staff",
+    adminRole: "Admin",
+    secretaryRole: "Secrétaire",
+    fullName: "Nom Complet",
+    fullNamePlaceholder: "Votre nom complet",
+    emailLabel: "Email",
+    emailPlaceholder: "votre@email.com",
+    haveAccount: "Vous avez déjà un compte ? Se connecter",
+    noAccount: "Pas de compte ? S'inscrire",
+    creatingAccount: "Création de compte...",
+    signingIn: "Connexion...",
+    loggingIn: "Connexion...",
+    createAccountBtn: "Créer un compte",
 
     // Dashboard
     overview: "Vue d'ensemble",
@@ -358,6 +421,41 @@ export const translations = {
     noResults: "Aucun document ne correspond à votre recherche.",
     analyzing: "Analyse du contenu...",
     uploadFailed: "Échec chargement",
-    imported: "Importé",
+    // Invoices & PDFs
+    swornTranslation: "Traduction Assermentée",
+    designation: "Désignation",
+    qtyPages: "Qté (Pages)",
+    unitPrice: "Prix Unit. HT",
+    totalHT: "Total HT",
+    totalTTC: "Total TTC",
+    vat: "TVA",
+    stamp: "Timbre Fiscal",
+    scanVerify: "Scanner pour vérifier",
+    digitalSig: "Signature Numérique Valide",
+    docId: "ID Document",
+    validityQuote: "Devis valable 30 jours.",
+    thanksInv: "Merci de votre confiance.",
+
+    // Final Docs
+    finalProduct: "Produit Final Traduit",
+    noFinalDocs: "Aucun document final téléversé.",
+    uploadFinal: "Téléverser Version(s) Finale(s)",
+    addFile: "Ajouter Fichier",
+    preview: "Aperçu",
+    ready: "PRÊT",
+    remove: "Supprimer",
+    download: "Télécharger",
+
+    // Email & Modals
+    sendViaEmail: "Envoyer {type} par Email",
+    emailPrompt: "Entrez l'adresse email du client. Le PDF sera généré et joint automatiquement.",
+    testingMode: "Mode Test : Envoi uniquement vers",
+    clientEmail: "Email Client",
+    sendEmail: "Envoyer Email",
+    sending: "Envoi...",
+    invoiceGenerated: "Facture Générée !",
+    success: "Succès !",
+    markCompleted: "Oui, Marquer comme Terminé",
+    date: "Date"
   }
 };

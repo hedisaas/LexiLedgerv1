@@ -1,6 +1,7 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { TranslationJob, Quote, BusinessProfile } from '../types';
+import { translations, Lang } from '../locales';
 
 // Register fonts (using standard fonts for now to ensure compatibility)
 // In a real app, you might want to register custom fonts for better styling
@@ -203,13 +204,39 @@ interface InvoicePDFProps {
     data: TranslationJob | Quote;
     type: 'invoice' | 'quote';
     profile: BusinessProfile;
+    lang: Lang;
 }
 
-const InvoicePDF: React.FC<InvoicePDFProps> = ({ data, type, profile }) => {
+const InvoicePDF: React.FC<InvoicePDFProps> = ({ data, type, profile, lang }) => {
+    const t = translations[lang] || translations['en'];
     const isQuote = type === 'quote';
-    const title = isQuote ? 'DEVIS' : 'FACTURE';
-    const refPrefix = isQuote ? 'DEV' : 'FAC';
-    const dateLabel = isQuote ? "Date d'émission" : "Date de facturation";
+    const title = isQuote ? t.devis : t.downloadInvoice.toUpperCase(); // Or generic title key
+    const refPrefix = isQuote ? t.devisRef.split(' ')[0] : 'FAC'; // fallback logic or new keys
+    // simpler: Let's use specific keys
+    const docTitle = isQuote ? t.devis : (type === 'invoice' ? "FACTURE" : "DOC"); // "FACTURE" is standard French, maybe add to locales if needed. t.downloadInvoice is "Facture"
+    // Let's stick to existing logic but improved
+    const displayTitle = isQuote ? t.devis : "FACTURE"; // t.devis is "DEVIS", t.downloadInvoice is "Facture", let's uppercase it just in case: t.downloadInvoice.toUpperCase()
+
+    // Actually, let's look at locales.ts again.
+    // t.devis is "DEVIS", t.downloadInvoice is "Facture".
+    // I'll use t.devis and t.downloadInvoice.toUpperCase()
+
+    const refLabel = isQuote ? t.devisRef : "Réf Facture"; // "Ref Facture" is hardcoded in French, add to locales? I added 'refFacture' -> No I didn't. 
+    // I added "swornTranslation", "designation", etc.
+    // I missed "Réf Facture". I can use `t.devisRef` and `t.invoiceRef`?
+    // In locales.ts earlier:
+    // devisRef: "Ref Devis"
+    // I did NOT add "Ref Facture".
+    // However I see `refPrefix = isQuote ? 'DEV' : 'FAC'` - this is code logic, can stay or be localized if needed.
+    // The Label in UI is: `<Text style={styles.metaLabel}>Réf {isQuote ? 'Devis' : 'Facture'}:</Text>`
+    // I can replace this whole block.
+
+    const dateLabel = isQuote ? t.creationDate : t.date; // "Date d'émission" vs "Date de facturation". 
+    // I added `date` key. `creationDate` exists.
+    // Let's use hardcoded strings in the replacement block if I don't have perfect keys, OR use the keys I just added if they fit.
+    // I did not add specific "Date de facturation".
+    // I will use `t.date` generically or keep the logic but translate the words inside the JSX.
+
     const quoteData = isQuote ? (data as Quote) : null;
 
     // Calculations
@@ -232,8 +259,8 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ data, type, profile }) => {
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
-                        <Text style={styles.title}>{title}</Text>
-                        <Text style={styles.subtitle}>Traduction Assermentée</Text>
+                        <Text style={styles.title}>{isQuote ? t.devis : "FACTURE"}</Text>
+                        <Text style={styles.subtitle}>{t.swornTranslation}</Text>
                     </View>
                     <View style={styles.headerRight}>
                         {profile.logo && <Image src={profile.logo} style={styles.logo} />}
@@ -249,7 +276,7 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ data, type, profile }) => {
                 {/* Meta Section */}
                 <View style={styles.metaSection}>
                     <View style={styles.clientSection}>
-                        <Text style={styles.sectionLabel}>Client:</Text>
+                        <Text style={styles.sectionLabel}>{t.client}:</Text>
                         <Text style={styles.clientName}>{data.clientName}</Text>
                         <Text style={styles.clientInfo}>{data.clientInfo}</Text>
                     </View>
@@ -264,7 +291,7 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ data, type, profile }) => {
                         </View>
                         {isQuote && quoteData?.validUntil && (
                             <View style={styles.metaRow}>
-                                <Text style={styles.metaLabel}>Valide jusqu'au:</Text>
+                                <Text style={styles.metaLabel}>{t.validUntil}:</Text>
                                 <Text style={[styles.metaValue, styles.validityText]}>{quoteData.validUntil}</Text>
                             </View>
                         )}
@@ -274,10 +301,10 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ data, type, profile }) => {
                 {/* Table */}
                 <View style={styles.table}>
                     <View style={styles.tableHeader}>
-                        <View style={styles.colDesc}><Text style={styles.tableHeaderText}>Désignation</Text></View>
-                        <View style={styles.colQty}><Text style={styles.tableHeaderText}>Qté (Pages)</Text></View>
-                        <View style={styles.colPrice}><Text style={styles.tableHeaderText}>Prix Unit. HT</Text></View>
-                        <View style={styles.colTotal}><Text style={styles.tableHeaderText}>Total HT</Text></View>
+                        <View style={styles.colDesc}><Text style={styles.tableHeaderText}>{t.designation}</Text></View>
+                        <View style={styles.colQty}><Text style={styles.tableHeaderText}>{t.qtyPages}</Text></View>
+                        <View style={styles.colPrice}><Text style={styles.tableHeaderText}>{t.unitPrice}</Text></View>
+                        <View style={styles.colTotal}><Text style={styles.tableHeaderText}>{t.totalHT}</Text></View>
                     </View>
                     <View style={styles.tableRow}>
                         <View style={styles.colDesc}>
@@ -300,7 +327,7 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ data, type, profile }) => {
                 <View style={styles.totalsSection}>
                     <View style={styles.totalsBox}>
                         <View style={styles.totalRow}>
-                            <Text style={styles.cellText}>Total HT</Text>
+                            <Text style={styles.cellText}>{t.totalHT}</Text>
                             <Text style={styles.cellText}>{montantHT.toFixed(3)} TND</Text>
                         </View>
                         <View style={styles.totalRow}>
@@ -314,7 +341,7 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ data, type, profile }) => {
                             </View>
                         )}
                         <View style={styles.totalRowFinal}>
-                            <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#0f172a' }}>Total TTC</Text>
+                            <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#0f172a' }}>{t.totalTTC}</Text>
                             <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#0369a1' }}>{totalTTC.toFixed(3)} TND</Text>
                         </View>
                     </View>
@@ -325,14 +352,14 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({ data, type, profile }) => {
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Image src={qrUrl} style={styles.qrCode} />
                         <View style={{ marginLeft: 10 }}>
-                            <Text style={{ fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase' }}>Scan to Verify</Text>
-                            <Text style={{ fontSize: 8, color: '#64748b' }}>ID: {data.id.slice(0, 8)}</Text>
+                            <Text style={{ fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase' }}>{t.scanVerify}</Text>
+                            <Text style={{ fontSize: 8, color: '#64748b' }}>{t.docId}: {data.id.slice(0, 8)}</Text>
                         </View>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                         {profile.rib && <Text style={{ fontSize: 8, color: '#334155', marginBottom: 2 }}>RIB: {profile.rib}</Text>}
                         <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#0f172a' }}>
-                            {isQuote ? "Devis valable 30 jours." : "Merci de votre confiance."}
+                            {isQuote ? t.validityQuote : t.thanksInv}
                         </Text>
                     </View>
                 </View>

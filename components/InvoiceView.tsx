@@ -34,7 +34,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
   const handleDownloadPDF = async () => {
     try {
       setIsGenerating(true);
-      const blob = await pdf(<InvoicePDF data={data} type={type} profile={profile} />).toBlob();
+      const blob = await pdf(<InvoicePDF data={data} type={type} profile={profile} lang={lang} />).toBlob();
       saveAs(blob, `${type === 'quote' ? 'Devis' : 'Facture'}_${data.clientName}_${data.id.slice(0, 6)}.pdf`);
 
       // Prompt for completion
@@ -69,7 +69,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
     try {
       setIsSending(true);
       // Generate PDF Blob
-      const blob = await pdf(<InvoicePDF data={data} type={type} profile={profile} />).toBlob();
+      const blob = await pdf(<InvoicePDF data={data} type={type} profile={profile} lang={lang} />).toBlob();
 
       let result;
       if (type === 'quote') {
@@ -128,10 +128,11 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
           </button>
           <button onClick={handleDownloadPDF} disabled={isGenerating} className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg shadow-lg font-medium transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            {isGenerating ? 'Génération...' : 'Télécharger PDF'}
+            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {isGenerating ? t.generating : t.download} PDF
           </button>
           <button onClick={onClose} className="bg-white text-slate-800 px-4 py-2 rounded-lg shadow-lg font-medium hover:bg-slate-100 transition-all transform hover:scale-105">
-            Fermer
+            {t.close}
           </button>
         </div>
       </div>
@@ -149,7 +150,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
             <div className="flex justify-between items-start border-b-2 border-slate-800 pb-8 mb-8">
               <div>
                 <h1 className="text-4xl font-bold tracking-tight text-slate-900 uppercase mb-2">{title}</h1>
-                <p className="text-sm text-slate-600 font-sans">Traduction Assermentée</p>
+                <p className="text-sm text-slate-600 font-sans">{t.swornTranslation}</p>
               </div>
               <div className="text-right font-sans text-sm">
                 {profile.logo && <img src={profile.logo} alt="Logo" className="h-16 mb-2 ml-auto object-contain" />}
@@ -179,7 +180,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
                 </div>
                 {isQuote && quoteData?.validUntil && (
                   <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase mr-4">Valide jusqu'au:</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase mr-4">{t.validUntil}:</span>
                     <span className="text-rose-600 font-medium">{quoteData.validUntil}</span>
                   </div>
                 )}
@@ -191,10 +192,10 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
               <table className="w-full mb-8 font-sans text-sm">
                 <thead>
                   <tr className="bg-slate-100 text-slate-900 uppercase tracking-wider">
-                    <th className="px-4 py-3 text-left w-1/2">Désignation</th>
-                    <th className="px-4 py-3 text-center">Qté (Pages)</th>
-                    <th className="px-4 py-3 text-right">Prix Unit. HT</th>
-                    <th className="px-4 py-3 text-right">Total HT</th>
+                    <th className="px-4 py-3 text-left w-1/2">{t.designation}</th>
+                    <th className="px-4 py-3 text-center">{t.qtyPages}</th>
+                    <th className="px-4 py-3 text-right">{t.unitPrice}</th>
+                    <th className="px-4 py-3 text-right">{t.totalHT}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -222,7 +223,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
               <div className="flex justify-end border-t border-slate-200 pt-4 mb-8">
                 <div className="w-72 font-sans text-sm">
                   <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                    <span className="font-medium text-slate-600">Total HT</span>
+                    <span className="font-medium text-slate-600">{t.totalHT}</span>
                     <span className="font-mono">{montantHT.toFixed(3)} TND</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-slate-100">
@@ -231,7 +232,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
                   </div>
                   {!isQuote && (
                     <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                      <span className="font-medium text-slate-600">Timbre Fiscal</span>
+                      <span className="font-medium text-slate-600">{t.stamp}</span>
                       <span className="font-mono">{timbreFiscal.toFixed(3)} TND</span>
                     </div>
                   )}
@@ -247,9 +248,9 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
                 <div className="flex items-center gap-4">
                   <img src={qrUrl} alt="QR Verify" className="w-20 h-20 border border-slate-200 p-1" />
                   <div className="text-[10px] text-slate-400 font-sans">
-                    <p className="uppercase font-bold">Scan to Verify</p>
-                    <p>Document ID: {data.id.slice(0, 8)}</p>
-                    <p>Digital Signature Valid</p>
+                    <p className="uppercase font-bold">{t.scanVerify}</p>
+                    <p>{t.docId}: {data.id.slice(0, 8)}</p>
+                    <p>{t.digitalSig}</p>
                   </div>
                 </div>
 
@@ -269,10 +270,10 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
         <div className="fixed inset-0 z-[120] bg-slate-900/50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-primary-600" /> Send {type === 'quote' ? 'Quote' : 'Invoice'} via Email
+              <Mail className="w-5 h-5 text-primary-600" /> {t.sendViaEmail.replace('{type}', type === 'quote' ? 'Quote' : 'Invoice')}
             </h3>
             <p className="text-sm text-slate-500 mb-4">
-              Enter the client's email address. The PDF will be generated and attached automatically.
+              {t.emailPrompt}
             </p>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
@@ -281,7 +282,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Client Email</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">{t.clientEmail}</label>
                 <input
                   type="email"
                   value={emailAddress}
@@ -295,9 +296,9 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setIsEmailModalOpen(false)}
-                  className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
+                  className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-700 hover:text-white text-slate-700 rounded-lg font-medium transition-colors"
                 >
-                  Cancel
+                  {t.cancel}
                 </button>
                 <button
                   onClick={handleSendEmail}
@@ -305,7 +306,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
                   className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                  {isSending ? 'Sending...' : 'Send Email'}
+                  {isSending ? t.sending : t.sendEmail}
                 </button>
               </div>
             </div>
@@ -319,7 +320,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
             <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">{type === 'invoice' ? "Invoice Generated!" : "Success!"}</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">{type === 'invoice' ? t.invoiceGenerated : t.success}</h3>
             <p className="text-sm text-slate-500 mb-6">{t.confirmMarkAsCompleted}</p>
 
             <div className="grid grid-cols-2 gap-3">
@@ -327,7 +328,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
                 onClick={() => setShowCompletionModal(false)}
                 className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium transition-colors"
               >
-                Cancel
+                {t.cancel}
               </button>
               <button
                 onClick={() => {
@@ -336,7 +337,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ data, type, profile, onClose,
                 }}
                 className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium transition-colors"
               >
-                Yes, Mark Completed
+                {t.markCompleted}
               </button>
             </div>
           </div>

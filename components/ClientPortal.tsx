@@ -2,7 +2,7 @@
 import React from 'react';
 import { TranslationJob, TranslationStatus, BusinessProfile } from '../types';
 import { Lang, translations } from '../locales';
-import { LogOut, Download, FileText, CheckCircle, Clock, Globe, Plus, Upload, Loader2 } from 'lucide-react';
+import { LogOut, Download, FileText, CheckCircle, Clock, Globe, Plus, Upload, Loader2, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface ClientPortalProps {
@@ -276,7 +276,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, jobs, profile, 
                                  type="file"
                                  onChange={e => setRequestFile(e.target.files ? e.target.files[0] : null)}
                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                 accept=".pdf,.doc,.docx,.jpg,.png"
+                                 accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.jpg,.jpeg,.png,.webp,.heic"
                               />
                               <div className="flex flex-col items-center gap-2">
                                  <div className="w-12 h-12 bg-primary-50 text-primary-600 rounded-full flex items-center justify-center mb-2">
@@ -287,10 +287,24 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, jobs, profile, 
                                  ) : (
                                     <>
                                        <p className="font-medium text-slate-700">Click to upload or drag and drop</p>
-                                       <p className="text-xs text-slate-400">PDF, Word, or Image (Max 10MB)</p>
+                                       <p className="text-xs text-slate-400">PDF, Word, Excel, Images (Max 10MB)</p>
                                     </>
                                  )}
                               </div>
+                           </div>
+
+                           <div className="mt-3 flex justify-center">
+                              <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors cursor-pointer">
+                                 <Camera className="w-4 h-4" />
+                                 Take Photo with Camera
+                                 <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    onChange={e => setRequestFile(e.target.files ? e.target.files[0] : null)}
+                                    className="hidden"
+                                 />
+                              </label>
                            </div>
                         </div>
 

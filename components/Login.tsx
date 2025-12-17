@@ -64,12 +64,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
 
             if (error) {
               console.error('Secretary authentication error:', error);
-              throw new Error('Invalid email or password');
+              throw new Error(t.errorCredentials);
             }
 
             if (!data || data.length === 0) {
               console.log('No secretary found with these credentials');
-              throw new Error('Invalid email or password');
+              throw new Error(t.errorCredentials);
             }
 
             // Successful Secretary Login
@@ -112,7 +112,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
             onClick={() => setMode('staff')}
             className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${mode === 'staff' ? 'bg-white text-slate-900 border-b-2 border-primary-600' : 'bg-slate-50 text-slate-400'}`}
           >
-            <ShieldCheck className="w-4 h-4" /> Staff Login
+            <ShieldCheck className="w-4 h-4" /> {t.staffLogin}
           </button>
           <button
             onClick={() => setMode('client')}
@@ -134,20 +134,20 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                     onClick={() => setSelectedRole('admin')}
                     className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${selectedRole === 'admin' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
-                    Admin
+                    {t.adminRole}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setSelectedRole('secretary'); setIsSignUp(false); }} // Secretaries can't sign up here
                     className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${selectedRole === 'secretary' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
-                    Secretary
+                    {t.secretaryRole}
                   </button>
                 </div>
 
                 {isSignUp && selectedRole === 'admin' && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.fullName}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <User className="h-5 w-5 text-slate-400" />
@@ -156,7 +156,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                         type="text"
                         required
                         className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-slate-900 placeholder-slate-400 transition-colors"
-                        placeholder="Your full name"
+                        placeholder={t.fullNamePlaceholder}
                         value={translatorName}
                         onChange={(e) => setTranslatorName(e.target.value)}
                       />
@@ -165,7 +165,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">{t.emailLabel}</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <User className="h-5 w-5 text-slate-400" />
@@ -174,7 +174,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                       type="email"
                       required
                       className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-slate-900 placeholder-slate-400 transition-colors"
-                      placeholder="your@email.com"
+                      placeholder={t.emailPlaceholder}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -205,7 +205,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                         onClick={() => setIsSignUp(false)}
                         className="text-primary-600 hover:text-primary-700 font-medium"
                       >
-                        Already have an account? Sign in
+                        {t.haveAccount}
                       </button>
                     ) : (
                       <button
@@ -213,7 +213,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                         onClick={() => setIsSignUp(true)}
                         className="text-primary-600 hover:text-primary-700 font-medium"
                       >
-                        Don't have an account? Sign up
+                        {t.noAccount}
                       </button>
                     )}
                   </div>
@@ -270,11 +270,11 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {mode === 'staff' ? (isSignUp ? 'Creating Account...' : 'Signing In...') : 'Logging In...'}
+                  {mode === 'staff' ? (isSignUp ? t.creatingAccount : t.signingIn) : t.loggingIn}
                 </>
               ) : (
                 <>
-                  {mode === 'staff' ? (isSignUp ? 'Create Account' : t.signIn) : t.signIn}
+                  {mode === 'staff' ? (isSignUp ? t.createAccountBtn : t.signIn) : t.signIn}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

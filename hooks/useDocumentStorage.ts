@@ -9,7 +9,7 @@ export const useDocumentStorage = () => {
     file: File,
     jobId: string,
     type: 'source' | 'translation' | 'attachment'
-  ): Promise<string | null> => {
+  ): Promise<{ url: string | null; error: string | null }> => {
     try {
       setUploading(true);
       setProgress(0);
@@ -42,10 +42,10 @@ export const useDocumentStorage = () => {
         .getPublicUrl(filePath);
 
       setProgress(100);
-      return urlData.publicUrl;
-    } catch (error) {
+      return { url: urlData.publicUrl, error: null };
+    } catch (error: any) {
       console.error('Upload error:', error);
-      return null;
+      return { url: null, error: error.message || 'Upload failed' };
     } finally {
       setUploading(false);
       setProgress(0);
@@ -70,7 +70,7 @@ export const useDocumentStorage = () => {
     const { data } = supabase.storage
       .from('documents')
       .getPublicUrl(filePath);
-    
+
     return data.publicUrl;
   };
 
