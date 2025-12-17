@@ -464,8 +464,8 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole, d
                     <th className="px-6 py-4 text-right">{t.baseHT}</th>
                     <th className="px-6 py-4 text-right text-rose-600">{t.collectedVAT}</th>
                     <th className="px-6 py-4 text-right text-blue-600">{t.stamps}</th>
-                    <th className="px-6 py-4 text-right font-bold text-emerald-600 bg-emerald-50">{t.netProfit}</th>
                     <th className="px-6 py-4 text-right font-bold text-slate-900">{t.totalTTC}</th>
+                    <th className="px-6 py-4 text-right font-bold text-emerald-600 bg-emerald-50">{t.netProfit}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -480,8 +480,8 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, expenses, lang, userRole, d
                         <td className="px-6 py-4 text-right font-mono">{row.baseHT.toFixed(3)}</td>
                         <td className="px-6 py-4 text-right font-mono text-rose-600">{tva.toFixed(3)}</td>
                         <td className="px-6 py-4 text-right font-mono text-blue-600">{stamps.toFixed(3)}</td>
-                        <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600 bg-emerald-50/50">{netProfit.toFixed(3)}</td>
                         <td className="px-6 py-4 text-right font-bold font-mono">{total.toFixed(3)}</td>
+                        <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600 bg-emerald-50/50">{netProfit.toFixed(3)}</td>
                       </tr>
                     );
                   })}
