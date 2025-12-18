@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
 interface ClientPortalProps {
    clientName: string;
    jobs: TranslationJob[];
-   profile: BusinessProfile;
+   profile?: BusinessProfile;
    onLogout: () => void;
    onPrintInvoice: (job: TranslationJob) => void;
    lang: Lang;
@@ -132,8 +132,8 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, jobs, profile, 
                </div>
                <div className="text-left md:text-right bg-white/10 p-4 rounded-xl backdrop-blur-sm w-full md:w-auto">
                   <p className="text-xs text-slate-300 uppercase font-bold tracking-wider">Translator Contact</p>
-                  <p className="font-medium text-lg">{profile.translatorName}</p>
-                  <p className="text-sm text-slate-300">{profile.phone}</p>
+                  <p className="font-medium text-lg">{profile?.translatorName || 'LexiLedger'}</p>
+                  <p className="text-sm text-slate-300">{profile?.phone || ''}</p>
                </div>
             </div>
 
