@@ -179,6 +179,13 @@ export const translations = {
     myDocuments: "My Documents",
     downloadInvoice: "Invoice",
     downloadFile: "Translation",
+    requestNewQuote: "Request New Quote",
+    translatorContact: "Translator Contact",
+    logout: "Logout",
+    connectionError: "Connection Error",
+    refreshPrompt: "Try refreshing the page.",
+    noDocsFound: "No documents found.",
+    document: "Document",
 
     // Sync
     syncing: "Syncing...",
@@ -416,6 +423,13 @@ export const translations = {
     myDocuments: "Mes Documents",
     downloadInvoice: "Facture",
     downloadFile: "Traduction",
+    requestNewQuote: "Demander Devis",
+    translatorContact: "Contact Traducteur",
+    logout: "Déconnexion",
+    connectionError: "Erreur de Connexion",
+    refreshPrompt: "Veuillez rafraîchir la page.",
+    noDocsFound: "Aucun document trouvé.",
+    document: "Document",
 
     // Sync
     syncing: "Synchro...",

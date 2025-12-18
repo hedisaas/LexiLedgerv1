@@ -2,6 +2,8 @@
 -- Requires valid client_name AND access_code to return data.
 -- This bypasses RLS (SECURITY DEFINER) but enforces its own auth check.
 
+DROP FUNCTION IF EXISTS public.get_client_jobs(text, text);
+
 CREATE OR REPLACE FUNCTION public.get_client_jobs(p_client_name text, p_access_code text)
 RETURNS TABLE (
   id uuid,
@@ -17,7 +19,7 @@ RETURNS TABLE (
   status text,
   remarks text,
   invoice_number text,
-  attachments jsonb[],
+  attachments text[],
   translated_text text,
   template_id text,
   final_document text,
@@ -29,9 +31,9 @@ AS $$
 BEGIN
   -- 1. Validate Credentials
   IF NOT EXISTS (
-    SELECT 1 FROM public.client_access
-    WHERE lower(client_name) = lower(p_client_name)
-    AND access_code = p_access_code
+    SELECT 1 FROM public.client_access ca
+    WHERE lower(ca.client_name) = lower(p_client_name)
+    AND ca.access_code = p_access_code
   ) THEN
     -- Return empty if auth fails (or raise exception)
     RETURN;
@@ -50,7 +52,7 @@ BEGIN
     t.target_lang,
     t.page_count,
     t.price_total,
-    t.status,
+    t.status::text,
     t.remarks,
     t.invoice_number,
     t.attachments,

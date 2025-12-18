@@ -166,10 +166,14 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
          {/* Navbar */}
          <nav className="bg-white border-b border-slate-200 shadow-sm px-6 py-4 flex justify-between items-center sticky top-0 z-50">
             <div className="flex items-center gap-3">
-               <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">L</div>
+               {profile?.logo ? (
+                  <img src={profile.logo} alt="Logo" className="w-10 h-10 rounded-lg object-contain bg-white shadow-lg" />
+               ) : (
+                  <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">L</div>
+               )}
                <div>
-                  <h1 className="font-bold text-lg text-slate-900 leading-none">LexiLedger</h1>
-                  <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Client Portal</span>
+                  <h1 className="font-bold text-lg text-slate-900 leading-none">{profile?.businessName || 'LexiLedger'}</h1>
+                  <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{t.clientLogin}</span>
                </div>
             </div>
             <div className="flex items-center gap-4">
@@ -177,7 +181,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                   <Globe className="w-3 h-3" /> {lang}
                </button>
                <button onClick={onLogout} className="flex items-center gap-2 text-rose-600 font-medium hover:bg-rose-50 px-4 py-2 rounded-lg transition-colors">
-                  <LogOut className="w-4 h-4" /> Logout
+                  <LogOut className="w-4 h-4" /> {t.logout}
                </button>
             </div>
          </nav>
@@ -190,7 +194,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                   <p className="text-slate-300">{t.clientPortalDesc}</p>
                </div>
                <div className="text-left md:text-right bg-white/10 p-4 rounded-xl backdrop-blur-sm w-full md:w-auto">
-                  <p className="text-xs text-slate-300 uppercase font-bold tracking-wider">Translator Contact</p>
+                  <p className="text-xs text-slate-300 uppercase font-bold tracking-wider">{t.translatorContact}</p>
                   <p className="font-medium text-lg">{profile?.translatorName || 'LexiLedger'}</p>
                   <p className="text-sm text-slate-300">{profile?.phone || ''}</p>
                </div>
@@ -201,9 +205,9 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-6 flex items-center gap-3">
                   <div className="bg-red-100 p-2 rounded-full"><LogOut className="w-4 h-4" /></div>
                   <div>
-                     <p className="font-bold">Connection Error</p>
+                     <p className="font-bold">{t.connectionError}</p>
                      <p className="text-sm font-mono">{debugError}</p>
-                     <p className="text-xs mt-1">Try refreshing the page or reloading the database schema.</p>
+                     <p className="text-xs mt-1">{t.refreshPrompt}</p>
                   </div>
                </div>
             )}
@@ -220,7 +224,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                   onClick={() => setActiveTab('request')}
                   className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 ${activeTab === 'request' ? 'bg-white text-primary-600 ring-2 ring-primary-100' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
                >
-                  <Plus className="w-4 h-4" /> Request New Quote
+                  <Plus className="w-4 h-4" /> {t.requestNewQuote}
                </button>
             </div>
 
@@ -236,10 +240,10 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                      <table className="w-full text-left text-sm">
                         <thead className="bg-white text-slate-500 font-semibold border-b border-slate-100">
                            <tr>
-                              <th className="px-6 py-4">Date</th>
-                              <th className="px-6 py-4">Document</th>
-                              <th className="px-6 py-4 text-center">Status</th>
-                              <th className="px-6 py-4 text-right">Actions</th>
+                              <th className="px-6 py-4">{t.date}</th>
+                              <th className="px-6 py-4">{t.document}</th>
+                              <th className="px-6 py-4 text-center">{t.status}</th>
+                              <th className="px-6 py-4 text-right">{t.actions}</th>
                            </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -267,7 +271,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                                  </td>
                               </tr>
                            )) : (
-                              <tr><td colSpan={4} className="text-center py-12 text-slate-400 italic">No documents found.</td></tr>
+                              <tr><td colSpan={4} className="text-center py-12 text-slate-400 italic">{t.noDocsFound}</td></tr>
                            )}
                         </tbody>
                      </table>
