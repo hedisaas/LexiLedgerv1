@@ -83,11 +83,27 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
         setError(err.message || 'Authentication failed');
       }
     } else {
-      // Mock client auth: Any name + code '1234'
-      if (clientName.length > 2 && accessCode === '1234') {
-        onLogin('client', clientName);
+      // Real Client Auth
+      if (clientName.length > 2 && accessCode.length > 0) {
+        try {
+          const { data: isValid, error: rpcError } = await supabase.rpc('verify_client_access', {
+            p_client_name: clientName,
+            p_access_code: accessCode
+          });
+
+          if (rpcError) throw rpcError;
+
+          if (isValid) {
+            onLogin('client', clientName);
+          } else {
+            setError("Invalid access code or client name.");
+          }
+        } catch (err: any) {
+          setError("Authentication error. Please try again.");
+          console.error(err);
+        }
       } else {
-        setError("Invalid access code (Try: 1234)");
+        setError("Please enter your name and access code.");
       }
     }
 

@@ -2,7 +2,8 @@
 import React, { useMemo, useState } from 'react';
 import { TranslationJob, TranslationStatus } from '../types';
 import { Lang, translations } from '../locales';
-import { Users, Search, FileText, DollarSign, Clock, ChevronRight, MessageCircle } from 'lucide-react';
+import { Users, Search, FileText, DollarSign, Clock, ChevronRight, MessageCircle, Key, Lock, RefreshCw, Layers, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface ClientManagerProps {
   jobs: TranslationJob[];
@@ -22,6 +23,65 @@ const ClientManager: React.FC<ClientManagerProps> = ({ jobs, lang }) => {
   const t = translations[lang];
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClient, setSelectedClient] = useState<ClientStats | null>(null);
+
+  // Access Key State
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [currentAccessKey, setCurrentAccessKey] = useState<string | null>(null);
+  const [keyLoading, setKeyLoading] = useState(false);
+
+  // Fetch Key
+  const fetchAccessCode = async (clientName: string) => {
+    setKeyLoading(true);
+    setCurrentAccessKey(null);
+    try {
+      const { data, error } = await supabase
+        .from('client_access')
+        .select('access_code')
+        .eq('client_name', clientName)
+        .single();
+
+      if (data) {
+        setCurrentAccessKey(data.access_code);
+      }
+    } catch (err) {
+      console.error("Error fetching access code:", err);
+    } finally {
+      setKeyLoading(false);
+    }
+  };
+
+  // Generate Key
+  const generateAccessCode = async () => {
+    if (!selectedClient) return;
+    setKeyLoading(true);
+    // Generate simple 6-digit code
+    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    try {
+      // Upsert (Insert or Update) based on client_name
+      const { error } = await supabase
+        .from('client_access')
+        .upsert({
+          client_name: selectedClient.name,
+          access_code: newCode,
+          // created_by should be handled by default or context, but RLS/Triggers might handle it. 
+          // For now we assume policy allows insert.
+        }, { onConflict: 'client_name' });
+
+      if (error) throw error;
+      setCurrentAccessKey(newCode);
+    } catch (err: any) {
+      console.error("Failed to generate key:", err);
+      alert("Failed to generate key. " + err.message);
+    } finally {
+      setKeyLoading(false);
+    }
+  };
+
+  const openKeyModal = (client: ClientStats) => {
+    fetchAccessCode(client.name);
+    setShowKeyModal(true);
+  };
 
   // Aggregate jobs by client
   const clients = useMemo(() => {
@@ -118,6 +178,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ jobs, lang }) => {
                 <div className="text-right">
                   <p className="text-sm text-slate-400 uppercase font-bold">{t.totalSpent}</p>
                   <p className="text-2xl font-mono font-bold text-primary-600">{selectedClient.totalSpent.toFixed(3)} <span className="text-sm">TND</span></p>
+                  <button onClick={() => openKeyModal(selectedClient)} className="mt-2 text-xs flex items-center gap-1 text-amber-600 hover:underline font-medium justify-end">
+                    <Key className="w-3 h-3" /> Manage Access
+                  </button>
                   <button onClick={() => openWhatsApp(selectedClient.name)} className="mt-2 text-xs flex items-center gap-1 text-emerald-600 hover:underline font-medium justify-end">
                     <MessageCircle className="w-3 h-3" /> {t.contactWhatsapp}
                   </button>
@@ -161,6 +224,49 @@ const ClientManager: React.FC<ClientManagerProps> = ({ jobs, lang }) => {
           </div>
         )}
       </div>
+
+      {/* Access Key Modal */}
+      {showKeyModal && selectedClient && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+              <Key className="w-5 h-5 text-amber-500" /> Client Access Key
+            </h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Use this key to allow <strong>{selectedClient.name}</strong> to log in to the Client Portal.
+            </p>
+
+            <div className="bg-slate-100 p-4 rounded-lg text-center mb-4 border border-slate-200">
+              {keyLoading ? (
+                <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
+              ) : (
+                currentAccessKey ? (
+                  <div className="text-2xl font-mono font-bold text-slate-900 tracking-widest">{currentAccessKey}</div>
+                ) : (
+                  <div className="text-sm text-slate-500 italic">No active key found.</div>
+                )
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={generateAccessCode}
+                disabled={keyLoading}
+                className="flex-1 flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                {keyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {currentAccessKey ? 'Regenerate Key' : 'Generate Key'}
+              </button>
+              <button
+                onClick={() => setShowKeyModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
