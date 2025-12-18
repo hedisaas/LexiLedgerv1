@@ -34,16 +34,24 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
    // Fetch Client Jobs specific to this user (Secure RPC)
    const [clientJobs, setClientJobs] = React.useState<TranslationJob[]>([]);
    const [loadingJobs, setLoadingJobs] = React.useState(true);
+   const [debugError, setDebugError] = React.useState<string | null>(null);
 
    React.useEffect(() => {
       const fetchMyJobs = async () => {
          setLoadingJobs(true);
+         setDebugError(null);
          try {
+            console.log("Fetching jobs for:", clientName, "Code:", accessCode); // Debug Log
+
             const { data, error } = await supabase.rpc('get_client_jobs', {
                p_client_name: clientName,
                p_access_code: accessCode
             });
-            if (error) throw error;
+
+            if (error) {
+               setDebugError(error.message);
+               throw error;
+            }
 
             // Map RPC result to TranslationJob
             const mappedJobs: TranslationJob[] = (data || []).map((job: any) => ({
@@ -67,8 +75,9 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                finalDocuments: job.final_documents || []
             }));
             setClientJobs(mappedJobs);
-         } catch (err) {
+         } catch (err: any) {
             console.error("Error fetching client jobs:", err);
+            setDebugError(err.message || "Unknown error");
             // Fallback to props if any (mostly empty)
             setClientJobs(initialJobs.filter(j => j.clientName.toLowerCase() === clientName.toLowerCase()));
          } finally {
@@ -186,6 +195,18 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                   <p className="text-sm text-slate-300">{profile?.phone || ''}</p>
                </div>
             </div>
+
+            {/* Debug Error Message */}
+            {debugError && (
+               <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-6 flex items-center gap-3">
+                  <div className="bg-red-100 p-2 rounded-full"><LogOut className="w-4 h-4" /></div>
+                  <div>
+                     <p className="font-bold">Connection Error</p>
+                     <p className="text-sm font-mono">{debugError}</p>
+                     <p className="text-xs mt-1">Try refreshing the page or reloading the database schema.</p>
+                  </div>
+               </div>
+            )}
 
             {/* Tabs */}
             <div className="flex gap-4 mb-6">
