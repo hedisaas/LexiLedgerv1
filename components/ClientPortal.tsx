@@ -35,6 +35,18 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
    const [clientJobs, setClientJobs] = React.useState<TranslationJob[]>([]);
    const [loadingJobs, setLoadingJobs] = React.useState(true);
    const [debugError, setDebugError] = React.useState<string | null>(null);
+   const [branding, setBranding] = React.useState<any>(null);
+
+   React.useEffect(() => {
+      // Fetch Public Branding (Logo, Name) if profile is missing
+      if (!profile) {
+         supabase.rpc('get_portal_branding').then(({ data }) => {
+            if (data && data.length > 0) {
+               setBranding(data[0]);
+            }
+         });
+      }
+   }, [profile]);
 
    React.useEffect(() => {
       const fetchMyJobs = async () => {
@@ -166,13 +178,13 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
          {/* Navbar */}
          <nav className="bg-white border-b border-slate-200 shadow-sm px-6 py-4 flex justify-between items-center sticky top-0 z-50">
             <div className="flex items-center gap-3">
-               {profile?.logo ? (
-                  <img src={profile.logo} alt="Logo" className="w-10 h-10 rounded-lg object-contain bg-white shadow-lg" />
+               {(profile?.logo || branding?.logo) ? (
+                  <img src={profile?.logo || branding?.logo} alt="Logo" className="w-10 h-10 rounded-lg object-contain bg-white shadow-lg" />
                ) : (
                   <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">L</div>
                )}
                <div>
-                  <h1 className="font-bold text-lg text-slate-900 leading-none">{profile?.businessName || 'LexiLedger'}</h1>
+                  <h1 className="font-bold text-lg text-slate-900 leading-none">{profile?.businessName || branding?.business_name || 'LexiLedger'}</h1>
                   <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{t.clientLogin}</span>
                </div>
             </div>
@@ -195,8 +207,8 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                </div>
                <div className="text-left md:text-right bg-white/10 p-4 rounded-xl backdrop-blur-sm w-full md:w-auto">
                   <p className="text-xs text-slate-300 uppercase font-bold tracking-wider">{t.translatorContact}</p>
-                  <p className="font-medium text-lg">{profile?.translatorName || 'LexiLedger'}</p>
-                  <p className="text-sm text-slate-300">{profile?.phone || ''}</p>
+                  <p className="font-medium text-lg">{profile?.translatorName || branding?.translator_name || 'LexiLedger'}</p>
+                  <p className="text-sm text-slate-300">{profile?.phone || branding?.phone || ''}</p>
                </div>
             </div>
 
@@ -282,16 +294,16 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
                   <div className="p-6 border-b border-slate-100 bg-slate-50">
                      <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <Plus className="w-5 h-5 text-primary-600" /> Request New Translation
+                        <Plus className="w-5 h-5 text-primary-600" /> {t.requestNewQuote}
                      </h3>
                   </div>
                   <div className="p-8">
                      <form onSubmit={handleRequestSubmit} className="space-y-6 max-w-2xl mx-auto">
                         <div>
-                           <label className="block text-sm font-medium text-slate-700 mb-2">Your Email</label>
+                           <label className="block text-sm font-medium text-slate-700 mb-2">{t.yourEmail}</label>
                            <input
                               type="email"
-                              placeholder="e.g. contact@company.com"
+                              placeholder={t.emailPlaceholderPrompt}
                               value={requestForm.email}
                               onChange={e => setRequestForm({ ...requestForm, email: e.target.value })}
                               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
@@ -301,7 +313,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
 
                         <div className="grid grid-cols-2 gap-6">
                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-2">Source Language</label>
+                              <label className="block text-sm font-medium text-slate-700 mb-2">{t.sourceLang}</label>
                               <select
                                  value={requestForm.sourceLang}
                                  onChange={e => setRequestForm({ ...requestForm, sourceLang: e.target.value })}
@@ -316,7 +328,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                               </select>
                            </div>
                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-2">Target Language</label>
+                              <label className="block text-sm font-medium text-slate-700 mb-2">{t.targetLang}</label>
                               <select
                                  value={requestForm.targetLang}
                                  onChange={e => setRequestForm({ ...requestForm, targetLang: e.target.value })}
@@ -333,7 +345,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                         </div>
 
                         <div>
-                           <label className="block text-sm font-medium text-slate-700 mb-2">Document Type</label>
+                           <label className="block text-sm font-medium text-slate-700 mb-2">{t.docType}</label>
                            <input
                               type="text"
                               placeholder="e.g. Birth Certificate, Contract, Diploma"
@@ -345,7 +357,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                         </div>
 
                         <div>
-                           <label className="block text-sm font-medium text-slate-700 mb-2">Upload Document</label>
+                           <label className="block text-sm font-medium text-slate-700 mb-2">{t.uploadDoc}</label>
                            <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
                               <input
                                  type="file"
@@ -361,8 +373,8 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                                     <p className="font-medium text-primary-600">{requestFile.name}</p>
                                  ) : (
                                     <>
-                                       <p className="font-medium text-slate-700">Click to upload or drag and drop</p>
-                                       <p className="text-xs text-slate-400">PDF, Word, Excel, Images (Max 10MB)</p>
+                                       <p className="font-medium text-slate-700">{t.clickToUpload}</p>
+                                       <p className="text-xs text-slate-400">{t.fileTypesConfig}</p>
                                     </>
                                  )}
                               </div>
@@ -371,7 +383,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                            <div className="mt-3 flex justify-center">
                               <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors cursor-pointer">
                                  <Camera className="w-4 h-4" />
-                                 Take Photo with Camera
+                                 {t.takePhoto}
                                  <input
                                     type="file"
                                     accept="image/*"
@@ -384,7 +396,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                         </div>
 
                         <div>
-                           <label className="block text-sm font-medium text-slate-700 mb-2">Additional Notes</label>
+                           <label className="block text-sm font-medium text-slate-700 mb-2">{t.remarks}</label>
                            <textarea
                               rows={3}
                               value={requestForm.notes}
