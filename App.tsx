@@ -51,6 +51,9 @@ const App: React.FC = () => {
   const [clientPortalUser, setClientPortalUser] = useState<string | null>(() => {
     return localStorage.getItem('lexiledger_client') || null;
   });
+  const [clientPortalKey, setClientPortalKey] = useState<string | null>(() => {
+    return localStorage.getItem('lexiledger_client_key') || null;
+  });
 
   // --- Secretary State ---
   const [secretary, setSecretary] = useState<Secretary | null>(() => {
@@ -112,7 +115,12 @@ const App: React.FC = () => {
     } else {
       localStorage.removeItem('lexiledger_client');
     }
-  }, [clientPortalUser]);
+    if (clientPortalKey) {
+      localStorage.setItem('lexiledger_client_key', clientPortalKey);
+    } else {
+      localStorage.removeItem('lexiledger_client_key');
+    }
+  }, [clientPortalUser, clientPortalKey]);
 
   useEffect(() => {
     if (secretary) {
@@ -129,7 +137,15 @@ const App: React.FC = () => {
   // --- Handlers ---
   const handleLogin = (role: 'admin' | 'secretary' | 'client', data?: string) => {
     if (role === 'client' && data) {
-      setClientPortalUser(data);
+      // Data is JSON string { name, code }
+      try {
+        const { name, code } = JSON.parse(data);
+        setClientPortalUser(name);
+        setClientPortalKey(code);
+      } catch (e) {
+        // Fallback for old sessions or raw strings (though verify_client_access should prevent this)
+        setClientPortalUser(data);
+      }
     } else if (role === 'secretary' && data) {
       const secretaryData: Secretary = JSON.parse(data);
       setSecretary(secretaryData);
@@ -142,6 +158,7 @@ const App: React.FC = () => {
       await signOut();
     } else if (clientPortalUser) {
       setClientPortalUser(null);
+      setClientPortalKey(null);
     } else if (secretary) {
       setSecretary(null);
     }
@@ -242,7 +259,8 @@ const App: React.FC = () => {
       <>
         <ClientPortal
           clientName={clientPortalUser}
-          jobs={jobs}
+          accessCode={clientPortalKey || ''}
+          jobs={[]} // We will self-fetch inside ClientPortal now
           profile={businessProfile || undefined}
           onLogout={handleLogout}
           onPrintInvoice={(job) => setPrintDoc({ data: job, type: 'invoice' })}

@@ -94,7 +94,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
           if (rpcError) throw rpcError;
 
           if (isValid) {
-            onLogin('client', clientName);
+            // Pass both name and code securely
+            onLogin('client', JSON.stringify({ name: clientName, code: accessCode }));
           } else {
             setError("Invalid access code or client name.");
           }

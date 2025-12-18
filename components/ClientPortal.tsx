@@ -7,7 +7,9 @@ import { supabase } from '../lib/supabase';
 
 interface ClientPortalProps {
    clientName: string;
-   jobs: TranslationJob[];
+   clientName: string;
+   accessCode: string;
+   jobs: TranslationJob[]; // Kept for backward compat but largely unused now
    profile?: BusinessProfile;
    onLogout: () => void;
    onPrintInvoice: (job: TranslationJob) => void;
@@ -15,7 +17,7 @@ interface ClientPortalProps {
    setLang: (lang: Lang) => void;
 }
 
-const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, jobs, profile, onLogout, onPrintInvoice, lang, setLang }) => {
+const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, jobs: initialJobs, profile, onLogout, onPrintInvoice, lang, setLang }) => {
    const t = translations[lang];
    const [activeTab, setActiveTab] = React.useState<'documents' | 'request'>('documents');
 
@@ -30,8 +32,57 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, jobs, profile, 
    const [requestFile, setRequestFile] = React.useState<File | null>(null);
    const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-   // Filter jobs for this client
-   const clientJobs = jobs.filter(j => j.clientName.toLowerCase() === clientName.toLowerCase());
+   // Fetch Client Jobs specific to this user (Secure RPC)
+   const [clientJobs, setClientJobs] = React.useState<TranslationJob[]>([]);
+   const [loadingJobs, setLoadingJobs] = React.useState(true);
+
+   React.useEffect(() => {
+      const fetchMyJobs = async () => {
+         setLoadingJobs(true);
+         try {
+            const { data, error } = await supabase.rpc('get_client_jobs', {
+               p_client_name: clientName,
+               p_access_code: accessCode
+            });
+            if (error) throw error;
+
+            // Map RPC result to TranslationJob
+            const mappedJobs: TranslationJob[] = (data || []).map((job: any) => ({
+               id: job.id,
+               date: job.date,
+               dueDate: job.due_date,
+               clientName: job.client_name,
+               clientInfo: job.client_info || '',
+               documentType: job.document_type,
+               sourceLang: job.source_lang,
+               targetLang: job.target_lang,
+               pageCount: job.page_count,
+               priceTotal: parseFloat(job.price_total),
+               status: job.status,
+               remarks: job.remarks || '',
+               invoiceNumber: job.invoice_number,
+               attachments: job.attachments,
+               translatedText: job.translated_text,
+               templateId: job.template_id,
+               finalDocument: job.final_document,
+               finalDocuments: job.final_documents || []
+            }));
+            setClientJobs(mappedJobs);
+         } catch (err) {
+            console.error("Error fetching client jobs:", err);
+            // Fallback to props if any (mostly empty)
+            setClientJobs(initialJobs.filter(j => j.clientName.toLowerCase() === clientName.toLowerCase()));
+         } finally {
+            setLoadingJobs(false);
+         }
+      };
+
+      if (clientName && accessCode) {
+         fetchMyJobs();
+      } else {
+         setLoadingJobs(false); // No Credentials
+      }
+   }, [clientName, accessCode, initialJobs]);
 
    const handleRequestSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
