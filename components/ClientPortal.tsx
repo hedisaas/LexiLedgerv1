@@ -3,6 +3,7 @@ import React from 'react';
 import { TranslationJob, TranslationStatus, BusinessProfile } from '../types';
 import { Lang, translations } from '../locales';
 import { LogOut, Download, FileText, CheckCircle, Clock, Globe, Plus, Upload, Loader2, Camera } from 'lucide-react';
+import InvoiceView from './InvoiceView'; // Import here
 import { supabase } from '../lib/supabase';
 
 interface ClientPortalProps {
@@ -162,16 +163,50 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
       }
    };
 
-   const handleDownloadFile = (job: TranslationJob) => {
+   const handleDownloadFile = async (job: TranslationJob) => {
       if (job.finalDocument) {
-         const link = document.createElement('a');
-         link.href = job.finalDocument;
-         link.download = `Translation_${job.documentType}.pdf`; // Assuming PDF/Doc
-         link.click();
+         try {
+            // Force download by fetching blob
+            const response = await fetch(job.finalDocument);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Translation_${job.documentType || 'Doc'}.pdf`; // Fallback name
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+         } catch (e) {
+            console.error("Download failed:", e);
+            // Fallback to simple link
+            window.open(job.finalDocument, '_blank');
+         }
       } else {
          alert("File not ready yet.");
       }
    };
+
+   // Invoice State for Client Portal
+   const [printDoc, setPrintDoc] = React.useState<TranslationJob | null>(null);
+
+   // Create a pseudo-profile from branding for the InvoiceView
+   const clientProfile: BusinessProfile | null = React.useMemo(() => {
+      if (profile) return profile;
+      if (branding) return {
+         id: 'public',
+         organizationId: 'public',
+         businessName: branding.business_name,
+         translatorName: branding.translator_name,
+         address: branding.address || '',
+         taxId: '',
+         phone: branding.phone,
+         email: branding.email,
+         rib: '',
+         logo: branding.logo
+      };
+      return null;
+   }, [profile, branding]);
 
    return (
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
@@ -276,7 +311,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                                              <Download className="w-3 h-3" /> {t.downloadFile}
                                           </button>
                                        )}
-                                       <button onClick={() => onPrintInvoice(job)} className="flex items-center gap-1 text-slate-600 hover:text-slate-800 font-medium text-xs bg-slate-100 px-3 py-1.5 rounded-md transition-colors">
+                                       <button onClick={() => setPrintDoc(job)} className="flex items-center gap-1 text-slate-600 hover:text-slate-800 font-medium text-xs bg-slate-100 px-3 py-1.5 rounded-md transition-colors">
                                           <FileText className="w-3 h-3" /> {t.downloadInvoice}
                                        </button>
                                     </div>
@@ -419,8 +454,33 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ clientName, accessCode, job
                </div>
             )}
          </div>
+
+         {/* Invoice Modal (Client Portal Version) */}
+         {printDoc && clientProfile && (
+            <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm">
+               <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                  <div className="flex justify-between items-center p-4 border-b">
+                     <h3 className="font-bold text-lg">{t.downloadInvoice}</h3>
+                     <button onClick={() => setPrintDoc(null)} className="text-slate-500 hover:text-slate-800">
+                        <LogOut className="w-5 h-5 rotate-180" /> {/* Close Icon substitute */}
+                     </button>
+                  </div>
+                  <div className="flex-1 overflow-auto bg-slate-100 p-4">
+                     {/* We import InvoiceView dynamically or mock it if needed, but since we have it: */}
+                     <InvoiceView
+                        data={printDoc}
+                        type="invoice"
+                        profile={clientProfile}
+                        onClose={() => setPrintDoc(null)}
+                        lang={lang}
+                     />
+                  </div>
+               </div>
+            </div>
+         )}
       </div>
    );
 };
+
 
 export default ClientPortal;
