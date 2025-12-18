@@ -7,9 +7,8 @@ import { supabase } from '../lib/supabase';
 
 interface ClientPortalProps {
    clientName: string;
-   clientName: string;
    accessCode: string;
-   jobs: TranslationJob[]; // Kept for backward compat but largely unused now
+   jobs: TranslationJob[];
    profile?: BusinessProfile;
    onLogout: () => void;
    onPrintInvoice: (job: TranslationJob) => void;
