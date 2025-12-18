@@ -186,6 +186,14 @@ export const translations = {
     refreshPrompt: "Try refreshing the page.",
     noDocsFound: "No documents found.",
     document: "Document",
+    yourEmail: "Your Email",
+    emailPlaceholderPrompt: "e.g. contact@company.com",
+    uploadDoc: "Upload Document",
+    clickToUpload: "Click to upload or drag and drop",
+    fileTypesConfig: "PDF, Word, Excel, Images (Max 10MB)",
+    takePhoto: "Take Photo with Camera",
+    submitRequest: "Submit Quote Request",
+    submitting: "Submitting...",
 
     // Sync
     syncing: "Syncing...",
@@ -430,6 +438,14 @@ export const translations = {
     refreshPrompt: "Veuillez rafraîchir la page.",
     noDocsFound: "Aucun document trouvé.",
     document: "Document",
+    yourEmail: "Votre Email",
+    emailPlaceholderPrompt: "ex: contact@entreprise.com",
+    uploadDoc: "Téléverser Document",
+    clickToUpload: "Cliquez pour téléverser ou glissez un fichier",
+    fileTypesConfig: "PDF, Word, Excel, Images (Max 10MB)",
+    takePhoto: "Prendre une photo",
+    submitRequest: "Envoyer Demande de Devis",
+    submitting: "Envoi en cours...",
 
     // Sync
     syncing: "Synchro...",
