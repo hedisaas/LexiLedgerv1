@@ -16,7 +16,7 @@ import Logo from './components/Logo';
 import LandingPage from './components/LandingPage';
 import MobileDashboard from './components/MobileDashboard';
 import MobileNav from './components/MobileNav';
-import { X, Plus, Clock } from 'lucide-react';
+import { X, Plus, Clock, DollarSign } from 'lucide-react';
 // import Analytics from './components/Analytics';
 import VerificationPage from './components/VerificationPage';
 import { translations, Lang } from './locales';
@@ -352,42 +352,7 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* Mobile Tab Bar (Bottom) - Scrollable */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 flex overflow-x-auto p-2 pb-4 gap-2 no-scrollbar">
-        {(!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
-          <button onClick={() => setActiveTab('dashboard')} className={`p-2 rounded-lg flex-shrink-0 ${activeTab === 'dashboard' ? 'text-primary-600 bg-primary-50' : 'text-slate-400'}`}>
-            <LayoutDashboard className="w-6 h-6" />
-          </button>
-        )}
-        {(!secretaryPermissions || secretaryPermissions.canManageTranslations) && (
-          <button onClick={() => setActiveTab('translations')} className={`p-2 rounded-lg flex-shrink-0 ${activeTab === 'translations' ? 'text-primary-600 bg-primary-50' : 'text-slate-400'}`}>
-            <FileText className="w-6 h-6" />
-          </button>
-        )}
-        {(!secretaryPermissions || secretaryPermissions.canManageClients) && (
-          <button onClick={() => setActiveTab('clients')} className={`p-2 rounded-lg flex-shrink-0 ${activeTab === 'clients' ? 'text-primary-600 bg-primary-50' : 'text-slate-400'}`}>
-            <Users className="w-6 h-6" />
-          </button>
-        )}
-        {(!secretaryPermissions || secretaryPermissions.canManageQuotes) && (
-          <button onClick={() => setActiveTab('quotes')} className={`p-2 rounded-lg flex-shrink-0 ${activeTab === 'quotes' ? 'text-primary-600 bg-primary-50' : 'text-slate-400'}`}>
-            <FileSignature className="w-6 h-6" />
-          </button>
-        )}
-        <button onClick={() => setActiveTab('resources')} className={`p-2 rounded-lg flex-shrink-0 ${activeTab === 'resources' ? 'text-primary-600 bg-primary-50' : 'text-slate-400'}`}>
-          <Database className="w-6 h-6" />
-        </button>
-        {(!secretaryPermissions || secretaryPermissions.canManageExpenses) && effectiveRole === 'admin' && (
-          <button onClick={() => setActiveTab('expenses')} className={`p-2 rounded-lg flex-shrink-0 ${activeTab === 'expenses' ? 'text-primary-600 bg-primary-50' : 'text-slate-400'}`}>
-            <PieChart className="w-6 h-6" />
-          </button>
-        )}
-        {(!secretaryPermissions || secretaryPermissions.canViewSettings) && (
-          <button onClick={() => setActiveTab('settings')} className={`p-2 rounded-lg flex-shrink-0 ${activeTab === 'settings' ? 'text-primary-600 bg-primary-50' : 'text-slate-400'}`}>
-            <SettingsIcon className="w-6 h-6" />
-          </button>
-        )}
-      </div>
+
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden flex flex-col relative">
