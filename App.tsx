@@ -450,6 +450,7 @@ const App: React.FC = () => {
           <>
             <MobileNav
               activeTab={activeTab}
+              lang={lang}
               onNavigate={(tab) => {
                 if (tab === 'add_job') {
                   setActiveTab('translations');

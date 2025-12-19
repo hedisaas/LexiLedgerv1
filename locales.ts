@@ -267,7 +267,8 @@ export const translations = {
     home: "Home",
     jobsShort: "Jobs",
     add: "Add",
-    archives: "Archives"
+    archives: "Archives",
+    recentlyAdded: "Recently Added"
   },
   fr: {
     // Sidebar
@@ -531,6 +532,7 @@ export const translations = {
     home: "Accueil",
     jobsShort: "Tâches",
     add: "Ajouter",
-    archives: "Archives"
+    archives: "Archives",
+    recentlyAdded: "Récemment Ajouté"
   }
 };
