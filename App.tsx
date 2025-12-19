@@ -14,6 +14,9 @@ import ClientPortal from './components/ClientPortal';
 import TranslationMemory from './components/TranslationMemory';
 import Logo from './components/Logo';
 import LandingPage from './components/LandingPage';
+import MobileDashboard from './components/MobileDashboard';
+import MobileNav from './components/MobileNav';
+import { X, Plus, Clock } from 'lucide-react';
 // import Analytics from './components/Analytics';
 import VerificationPage from './components/VerificationPage';
 import { translations, Lang } from './locales';
@@ -397,9 +400,26 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-32 md:pb-8">
           {activeTab === 'dashboard' && (!secretaryPermissions || secretaryPermissions.canViewDashboard) && (
-            <Dashboard jobs={jobs} expenses={expenses} lang={lang} userRole={effectiveRole} />
+            isMobile ? (
+              <MobileDashboard
+                jobs={jobs}
+                expenses={expenses}
+                lang={lang}
+                onNavigate={(tab) => {
+                  if (tab === 'add_job') {
+                    // Open Add Form Logic (Usually in TranslationManager)
+                    setActiveTab('translations');
+                    // We might need a way to auto-open the form, but simply navigating to list is fine for now
+                  } else {
+                    setActiveTab(tab as any);
+                  }
+                }}
+              />
+            ) : (
+              <Dashboard jobs={jobs} expenses={expenses} lang={lang} userRole={effectiveRole} />
+            )
           )}
           {activeTab === 'translations' && (!secretaryPermissions || secretaryPermissions.canManageTranslations) && (
             <TranslationManager
@@ -448,31 +468,91 @@ const App: React.FC = () => {
             />
           )}
         </div>
-      </main>
+    </div>
+      </main >
 
-      {/* Overlays */}
-      {businessProfile && (
-        <InvoiceView
-          data={printDoc?.data || null}
-          type={printDoc?.type || 'invoice'}
-          profile={businessProfile}
-          onClose={() => setPrintDoc(null)}
-          onMarkAsCompleted={() => {
-            if (printDoc?.data && printDoc.type === 'invoice') {
-              handleUpdateJob({ ...printDoc.data as TranslationJob, status: TranslationStatus.COMPLETED });
-            }
-          }}
-          lang={lang}
-        />
-      )}
-
-      {/* Global Modals */}
-      <ProfileCompletionModal
-        profile={businessProfile}
-        onNavigateToSettings={() => setActiveTab('settings')}
+  {/* Mobile Navigation */ }
+{
+  user && !clientPortalUser && (
+    <>
+      <MobileNav
+        activeTab={activeTab}
+        onNavigate={(tab) => {
+          if (tab === 'add_job') {
+            setActiveTab('translations');
+            // Optionally trigger "IsFormOpen" via context or prop if we had it lifted
+          } else {
+            setActiveTab(tab as any);
+          }
+        }}
+        onOpenMenu={() => setIsMobileMenuOpen(true)}
       />
 
-    </div>
+      {/* Mobile Menu Drawer */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-sm text-white p-6 animate-in slide-in-from-right">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-bold">Menu</h2>
+            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-white/10 rounded-full">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button onClick={() => { setActiveTab('quotes'); setIsMobileMenuOpen(false); }} className="p-4 bg-white/5 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10">
+              <FileText className="w-8 h-8 text-amber-400" />
+              <span className="font-bold">Quotes</span>
+            </button>
+            <button onClick={() => { setActiveTab('expenses'); setIsMobileMenuOpen(false); }} className="p-4 bg-white/5 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10">
+              <DollarSign className="w-8 h-8 text-rose-400" />
+              <span className="font-bold">Expenses</span>
+            </button>
+            <button onClick={() => { setActiveTab('resources'); setIsMobileMenuOpen(false); }} className="p-4 bg-white/5 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10">
+              <Database className="w-8 h-8 text-blue-400" />
+              <span className="font-bold">Archives</span>
+            </button>
+            <button onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }} className="p-4 bg-white/5 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10">
+              <SettingsIcon className="w-8 h-8 text-slate-400" />
+              <span className="font-bold">Settings</span>
+            </button>
+          </div>
+
+          <div className="mt-12">
+            <button onClick={handleLogout} className="w-full py-4 bg-rose-600 rounded-xl font-bold flex items-center justify-center gap-2">
+              <LogOut className="w-5 h-5" /> Logout
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+{/* Overlays */ }
+{
+  businessProfile && (
+    <InvoiceView
+      data={printDoc?.data || null}
+      type={printDoc?.type || 'invoice'}
+      profile={businessProfile}
+      onClose={() => setPrintDoc(null)}
+      onMarkAsCompleted={() => {
+        if (printDoc?.data && printDoc.type === 'invoice') {
+          handleUpdateJob({ ...printDoc.data as TranslationJob, status: TranslationStatus.COMPLETED });
+        }
+      }}
+      lang={lang}
+    />
+  )
+}
+
+{/* Global Modals */ }
+<ProfileCompletionModal
+  profile={businessProfile}
+  onNavigateToSettings={() => setActiveTab('settings')}
+/>
+
+    </div >
   );
 };
 
