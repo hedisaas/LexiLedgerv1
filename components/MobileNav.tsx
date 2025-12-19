@@ -1,18 +1,23 @@
 import React from 'react';
 import { Home, FileText, Plus, Users, Menu } from 'lucide-react';
 
+import { Lang, translations } from '../locales';
+
 interface MobileNavProps {
     activeTab: string;
     onNavigate: (tab: string) => void;
     onOpenMenu: () => void;
+    lang: Lang;
 }
 
-const MobileNav: React.FC<MobileNavProps> = ({ activeTab, onNavigate, onOpenMenu }) => {
+const MobileNav: React.FC<MobileNavProps> = ({ activeTab, onNavigate, onOpenMenu, lang }) => {
+    const t = translations[lang];
+
     const navItems = [
-        { id: 'dashboard', icon: Home, label: 'Home' },
-        { id: 'translations', icon: FileText, label: 'Jobs' },
-        { id: 'add_job', icon: Plus, label: 'Add', isAction: true }, // Special styling for Add
-        { id: 'clients', icon: Users, label: 'Clients' },
+        { id: 'dashboard', icon: Home, label: t.home },
+        { id: 'translations', icon: FileText, label: t.jobsShort },
+        { id: 'add_job', icon: Plus, label: t.add, isAction: true }, // Special styling for Add
+        { id: 'clients', icon: Users, label: t.clients },
     ];
 
     return (
@@ -45,7 +50,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, onNavigate, onOpenMenu
                 className={`flex flex-col items-center gap-1 min-w-[3.5rem] transition-colors ${activeTab === 'menu' ? 'text-primary-600' : 'text-slate-400 hover:text-slate-600'}`}
             >
                 <Menu className="w-6 h-6" />
-                <span className="text-[10px] font-bold">Menu</span>
+                <span className="text-[10px] font-bold">{t.menu}</span>
             </button>
         </div>
     );

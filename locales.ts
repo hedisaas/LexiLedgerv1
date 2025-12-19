@@ -252,7 +252,22 @@ export const translations = {
     invoiceGenerated: "Invoice Generated!",
     success: "Success!",
     markCompleted: "Yes, Mark Completed",
-    date: "Date"
+    date: "Date",
+
+    // Mobile
+    mobile: "Mobile",
+    today: "Today",
+    finishedJobs: "Finished Jobs",
+    urgent: "Urgent",
+    viewAll: "View All",
+    noDate: "No Date",
+    noUrgentJobs: "No urgent jobs. You're all caught up!",
+    quickActions: "Quick Actions",
+    menu: "Menu",
+    home: "Home",
+    jobsShort: "Jobs",
+    add: "Add",
+    archives: "Archives"
   },
   fr: {
     // Sidebar
@@ -503,5 +518,19 @@ export const translations = {
     success: "Succès !",
     markCompleted: "Oui, Marquer comme Terminé",
     date: "Date"
+    // Mobile
+    mobile: "Mobile",
+    today: "Aujourd'hui",
+    finishedJobs: "Tâches Finies",
+    urgent: "Urgent",
+    viewAll: "Voir Tout",
+    noDate: "Pas de Date",
+    noUrgentJobs: "Aucune tâche urgente. Vous êtes à jour !",
+    quickActions: "Actions Rapides",
+    menu: "Menu",
+    home: "Accueil",
+    jobsShort: "Tâches",
+    add: "Ajouter",
+    archives: "Archives"
   }
 };
