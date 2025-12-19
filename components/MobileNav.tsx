@@ -11,7 +11,7 @@ interface MobileNavProps {
 }
 
 const MobileNav: React.FC<MobileNavProps> = ({ activeTab, onNavigate, onOpenMenu, lang }) => {
-    const t = translations[lang];
+    const t = translations[lang] || translations['en'];
 
     const navItems = [
         { id: 'dashboard', icon: Home, label: t.home },

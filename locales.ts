@@ -517,7 +517,7 @@ export const translations = {
     invoiceGenerated: "Facture Générée !",
     success: "Succès !",
     markCompleted: "Oui, Marquer comme Terminé",
-    date: "Date"
+    date: "Date",
     // Mobile
     mobile: "Mobile",
     today: "Aujourd'hui",
