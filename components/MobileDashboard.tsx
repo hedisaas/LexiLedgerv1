@@ -95,6 +95,38 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ jobs, expenses, lang,
                 </div>
             </div>
 
+            {/* Recently Added Section */}
+            <div>
+                <h2 className="text-lg font-bold text-slate-800 mb-3">{t.recentlyAdded}</h2>
+                <div className="space-y-3">
+                    {jobs
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .slice(0, 3)
+                        .map(job => (
+                            <div key={job.id} onClick={() => onNavigate('translations')} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center justify-between active:bg-slate-50 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                                        <TrendingUp className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-slate-900">{job.documentType}</div>
+                                        <div className="text-xs text-slate-500">{job.clientName} • {job.date}</div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-sm font-bold text-slate-900">{job.priceTotal} TND</div>
+                                    <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${job.status === TranslationStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700' :
+                                        job.status === TranslationStatus.PENDING ? 'bg-amber-100 text-amber-700' :
+                                            'bg-slate-100 text-slate-600'
+                                        }`}>
+                                        {job.status}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                </div>
+            </div>
+
             {/* Quick Actions */}
             <div>
                 <h2 className="text-lg font-bold text-slate-800 mb-3">{t.quickActions}</h2>
