@@ -463,35 +463,51 @@ const App: React.FC = () => {
 
             {/* Mobile Menu Drawer */}
             {isMobileMenuOpen && (
-              <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-sm text-white p-6 animate-in slide-in-from-right">
+              <div className="fixed inset-0 z-[120] bg-white text-slate-900 p-6 animate-in slide-in-from-right flex flex-col shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-2xl font-bold">Menu</h2>
-                  <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-white/10 rounded-full">
+                  <h2 className="text-2xl font-bold">{t.menu}</h2>
+                  <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200">
                     <X className="w-6 h-6" />
                   </button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => { setActiveTab('quotes'); setIsMobileMenuOpen(false); }} className="p-4 bg-white/5 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10">
-                    <FileText className="w-8 h-8 text-amber-400" />
-                    <span className="font-bold">Quotes</span>
+                  <button onClick={() => { setActiveTab('quotes'); setIsMobileMenuOpen(false); }} className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center gap-3 hover:bg-slate-100 transition-colors shadow-sm">
+                    <div className="p-3 bg-amber-100 rounded-full text-amber-600">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <span className="font-bold text-slate-700">{t.quotes}</span>
                   </button>
-                  <button onClick={() => { setActiveTab('expenses'); setIsMobileMenuOpen(false); }} className="p-4 bg-white/5 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10">
-                    <DollarSign className="w-8 h-8 text-rose-400" />
-                    <span className="font-bold">Expenses</span>
+
+                  <button onClick={() => { setActiveTab('expenses'); setIsMobileMenuOpen(false); }} className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center gap-3 hover:bg-slate-100 transition-colors shadow-sm">
+                    <div className="p-3 bg-rose-100 rounded-full text-rose-600">
+                      <DollarSign className="w-6 h-6" />
+                    </div>
+                    <span className="font-bold text-slate-700">{t.expenses}</span>
                   </button>
-                  <button onClick={() => { setActiveTab('resources'); setIsMobileMenuOpen(false); }} className="p-4 bg-white/5 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10">
-                    <Database className="w-8 h-8 text-blue-400" />
-                    <span className="font-bold">Archives</span>
+
+                  <button onClick={() => { setActiveTab('resources'); setIsMobileMenuOpen(false); }} className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center gap-3 hover:bg-slate-100 transition-colors shadow-sm">
+                    <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                      <Database className="w-6 h-6" />
+                    </div>
+                    <span className="font-bold text-slate-700">{t.archives}</span>
                   </button>
-                  <button onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }} className="p-4 bg-white/5 rounded-xl flex flex-col items-center gap-2 hover:bg-white/10">
-                    <SettingsIcon className="w-8 h-8 text-slate-400" />
-                    <span className="font-bold">Settings</span>
+
+                  <button onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }} className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center gap-3 hover:bg-slate-100 transition-colors shadow-sm">
+                    <div className="p-3 bg-slate-200 rounded-full text-slate-600">
+                      <SettingsIcon className="w-6 h-6" />
+                    </div>
+                    <span className="font-bold text-slate-700">{t.settings}</span>
                   </button>
                 </div>
 
-                <div className="mt-12">
-                  <button onClick={handleLogout} className="w-full py-4 bg-rose-600 rounded-xl font-bold flex items-center justify-center gap-2">
+                <div className="mt-auto mb-8 space-y-4">
+                  {/* Language Toggle in Menu */}
+                  <button onClick={toggleLang} className="w-full py-4 bg-slate-50 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-200 text-slate-700">
+                    <Globe className="w-5 h-5" /> {lang === 'en' ? 'Switch to French' : 'Passer en Anglais'}
+                  </button>
+
+                  <button onClick={handleLogout} className="w-full py-4 bg-rose-50 rounded-xl font-bold flex items-center justify-center gap-2 text-rose-600 border border-rose-100">
                     <LogOut className="w-5 h-5" /> Logout
                   </button>
                 </div>
