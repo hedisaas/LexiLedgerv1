@@ -23,7 +23,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ jobs, expenses, lang,
 
     // 2. Due Soon (Next 3 days)
     const dueJobs = jobs
-        .filter(j => j.status === TranslationStatus.IN_PROGRESS || j.status === TranslationStatus.PENDING)
+        .filter(j => j.status === TranslationStatus.PENDING) // Pending is effectively in progress
         .sort((a, b) => new Date(a.dueDate || '9999-12-31').getTime() - new Date(b.dueDate || '9999-12-31').getTime())
         .slice(0, 3); // Top 3 urgent
 
@@ -82,8 +82,8 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ jobs, expenses, lang,
                                 <div className="text-xs text-slate-500">{job.clientName} • {job.dueDate || 'No Date'}</div>
                             </div>
                             <div className={`px-2 py-1 rounded-lg text-xs font-bold ${job.status === TranslationStatus.PENDING ? 'bg-amber-100 text-amber-700' :
-                                    job.status === TranslationStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
-                                        'bg-slate-100 text-slate-600'
+                                job.status === TranslationStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
+                                    'bg-slate-100 text-slate-600'
                                 }`}>
                                 {job.status}
                             </div>
