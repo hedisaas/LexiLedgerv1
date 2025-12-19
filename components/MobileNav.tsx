@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, FileText, Plus, Users, Menu } from 'lucide-react';
+import { Home, FileSignature, Plus, Users, Menu } from 'lucide-react';
 
 import { Lang, translations } from '../locales';
 
@@ -15,7 +15,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, onNavigate, onOpenMenu
 
     const navItems = [
         { id: 'dashboard', icon: Home, label: t.home },
-        { id: 'translations', icon: FileText, label: t.jobsShort },
+        { id: 'quotes', icon: FileSignature, label: t.quotes },
         { id: 'add_job', icon: Plus, label: t.add, isAction: true }, // Special styling for Add
         { id: 'clients', icon: Users, label: t.clients },
     ];
