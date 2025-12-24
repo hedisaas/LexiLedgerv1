@@ -12,51 +12,50 @@ serve(async (req) => {
     }
 
     try {
-        const { text, sourceLang, targetLang, documentType } = await req.json();
+        const { text, sourceLang, targetLang } = await req.json();
 
         if (!text) {
             throw new Error("Text is required");
         }
 
-        const apiKey = Deno.env.get('GEMINI_API_KEY');
-        if (!apiKey) {
-            throw new Error("GEMINI_API_KEY is not set");
-        }
+        // DEEPL API KEY (Free Tier)
+        const apiKey = "3a75fb36-4bfa-4d4c-ae60-2b2dc05cfa20:fx";
 
-        const prompt = `
-      You are a professional sworn translator. 
-      Translate the following "${documentType || 'document'}" from ${sourceLang || 'auto'} to ${targetLang || 'English'}.
-      Maintain the original formatting and professional tone.
-      Do not include any conversational text, only the translation.
-      
-      Text to translate:
-      ${text}
-    `;
+        // Language Mapping
+        let target = (targetLang || 'EN').toUpperCase();
+        if (target === 'EN') target = 'EN-US'; // DeepL requires specific EN variant for target
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        let source = (sourceLang || '').toUpperCase();
+        if (source === 'AUTO') source = ''; // Let DeepL detect
+
+        const p = new URLSearchParams();
+        p.append('auth_key', apiKey);
+        p.append('text', text);
+        p.append('target_lang', target);
+        if (source) p.append('source_lang', source);
+
+        console.log(`DeepL Translating to ${target}...`);
+
+        const response = await fetch('https://api-free.deepl.com/v2/translate', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: prompt }]
-                }]
-            })
+            body: p
         });
 
         const data = await response.json();
 
-        if (data.error) {
-            console.error("Gemini API Error:", data.error);
-            throw new Error(data.error.message || "Failed to generate translation");
+        if (response.status !== 200) {
+            console.error("DeepL API Error:", data);
+            throw new Error(data.message || "Failed to translate with DeepL");
         }
 
-        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-            throw new Error("No translation generated");
+        if (!data.translations || !data.translations[0]) {
+            throw new Error("No translation returned from DeepL");
         }
 
-        const translatedText = data.candidates[0].content.parts[0].text;
+        const translatedText = data.translations[0].text;
 
         return new Response(
             JSON.stringify({ translation: translatedText }),
