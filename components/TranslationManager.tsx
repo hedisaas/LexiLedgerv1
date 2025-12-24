@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { TranslationJob, Language, TranslationStatus } from '../types';
 import { Plus, Search, Printer, Edit2, Trash2, AlertCircle, Calendar as CalendarIcon, List, ChevronLeft, ChevronRight, Camera, Upload, X, Copy, FileText, Languages, Save, Maximize2, Eye, Download, Code, LayoutTemplate, RotateCw, RotateCcw, RefreshCw, ZoomIn, ZoomOut, Move, ChevronDown, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, FileDown, Book, Database, BookOpen, CheckCircle, FolderOpen, AlignJustify, List as ListIcon, ListOrdered, Highlighter, Type, Palette, Sparkles, Loader2, Files } from 'lucide-react';
 import { generateSwornTranslation } from '../services/geminiService';
+import { extractTextFromImage } from '../services/ocrService';
 import { findGlossaryMatches, findTMMatches } from '../services/tmService';
 import { Lang, translations } from '../locales';
 import RegistryView from './RegistryView';
@@ -439,20 +440,31 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
   const handleMagicDraft = async () => {
     setIsAiTranslating(true);
     try {
-      // 1. If Image exists, use Vision AI (generateSwornTranslation)
+      // 1. If Image exists, use Tesseract OCR + DeepL
       if (workbenchJob?.attachments && workbenchJob.attachments.length > 0) {
         const processedImage = await rotateImage(workbenchJob.attachments[0], rotation);
-        const result = await generateSwornTranslation(
+
+        console.log("Starting OCR...");
+        const rawText = await extractTextFromImage(processedImage, 'eng'); // Default to English OCR for now, logic can be improved
+
+        console.log("OCR Complete, translating...");
+        const translatedText = await translateText(
+          rawText,
           workbenchJob.sourceLang.toString(),
           workbenchJob.targetLang.toString(),
-          workbenchJob.documentType,
-          processedImage,
-          targetOrientation
+          workbenchJob.documentType
         );
-        if (editorRef.current) editorRef.current.innerHTML = result;
-        setWorkbenchJob(prev => prev ? ({ ...prev, translatedText: result }) : null);
+
+        // Basic formatting: Split by newline and wrap in paragraphs
+        const htmlResult = translatedText.split('\n')
+          .filter(line => line.trim().length > 0)
+          .map(line => `<p>${line}</p>`)
+          .join('');
+
+        if (editorRef.current) editorRef.current.innerHTML = htmlResult;
+        setWorkbenchJob(prev => prev ? ({ ...prev, translatedText: htmlResult }) : null);
       }
-      // 2. If no image, but text exists (e.g. pasted), use Text AI (Edge Function)
+      // 2. If no image, but text exists (e.g. pasted), use Text AI (Edge Function -> DeepL)
       else if (editorRef.current && editorRef.current.innerText.trim().length > 0) {
         const textToTranslate = editorRef.current.innerText;
         const result = await translateText(
@@ -469,6 +481,7 @@ const TranslationManager: React.FC<TranslationManagerProps> = ({ jobs, onAddJob,
         alert("Please upload a document image or paste text to translate.");
       }
     } catch (error: any) {
+      console.error(error);
       alert(`AI Error: ${error.message}`);
     } finally {
       setIsAiTranslating(false);
